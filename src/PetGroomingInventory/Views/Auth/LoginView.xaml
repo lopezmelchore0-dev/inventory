@@ -1,0 +1,53 @@
+<UserControl x:Class="LoginView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:PetGroomingInventory">
+    <ScrollViewer FocusVisualStyle="{x:Null}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Border x:Name="FormCard" Style="{StaticResource AuthCard}">
+            <StackPanel>
+                <local:AuthBrand Title="Admin Login" Subtitle="Sign in to manage your shop's inventory."/>
+
+                <Border x:Name="NoticeBorder" Style="{StaticResource NoticeBox}" Background="{StaticResource LavenderBrush}"
+                        Margin="0,18,0,0" Visibility="Collapsed">
+                    <TextBlock x:Name="NoticeText" TextWrapping="Wrap" Foreground="{StaticResource PrimaryDarkBrush}" FontSize="13"/>
+                </Border>
+
+                <StackPanel Margin="0,20,0,14">
+                    <TextBlock Text="Username" Style="{StaticResource LabelText}"/>
+                    <TextBox x:Name="UsernameBox" Tag="Enter your username" MaxLength="30"
+                             AutomationProperties.Name="Username"/>
+                    <TextBlock x:Name="UsernameError" Style="{StaticResource ErrorText}"/>
+                </StackPanel>
+
+                <StackPanel Margin="0,0,0,12">
+                    <TextBlock Text="Password" Style="{StaticResource LabelText}"/>
+                    <local:PasswordField x:Name="PasswordInput" Placeholder="Enter your password"
+                                         AutomationProperties.Name="Password"/>
+                    <TextBlock x:Name="PasswordError" Style="{StaticResource ErrorText}"/>
+                </StackPanel>
+
+                <Grid Margin="0,0,0,18">
+                    <CheckBox x:Name="RememberBox" Content="Remember me" VerticalAlignment="Center"
+                              ToolTip="Remembers your username on this computer. Your password is always required."/>
+                    <Button x:Name="ForgotButton" Style="{StaticResource LinkButton}" Content="Forgot Password?" HorizontalAlignment="Right"
+                            Click="Forgot_Click"/>
+                </Grid>
+
+                <Border Style="{StaticResource NoticeBox}" Margin="0,0,0,14" Visibility="{Binding Visibility, ElementName=GeneralError}">
+                    <TextBlock x:Name="GeneralError" Style="{StaticResource ErrorText}" Margin="0" FontSize="13"/>
+                </Border>
+
+                <Button x:Name="LoginButton" Style="{StaticResource PrimaryButton}" Content="Login" Padding="18,12"
+                        HorizontalAlignment="Stretch" Click="Login_Click"/>
+
+                <StackPanel x:Name="RegisterLinkPanel" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+                    <TextBlock Text="Don't have an account?" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                    <Button x:Name="RegisterButton" Style="{StaticResource LinkButton}" Content="Register" FontWeight="SemiBold" Margin="2,0,0,0" Click="Register_Click"/>
+                </StackPanel>
+                <TextBlock x:Name="RegisterClosedText" Style="{StaticResource MutedText}" TextAlignment="Center" Margin="0,20,0,0"
+                           Visibility="Collapsed"
+                           Text="Need another account? Ask an existing Admin to add you from their Profile page."/>
+            </StackPanel>
+        </Border>
+    </ScrollViewer>
+</UserControl>

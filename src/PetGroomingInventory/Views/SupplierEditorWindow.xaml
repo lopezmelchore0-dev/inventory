@@ -1,0 +1,81 @@
+<Window x:Class="SupplierEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Style="{StaticResource DialogWindow}" Width="620" Title="Add Supplier">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Margin="28,24,18,0" Background="Transparent" MouseLeftButtonDown="Header_MouseLeftButtonDown">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="44" Height="44" CornerRadius="14" Background="{StaticResource LavenderBrush}">
+                    <TextBlock Style="{StaticResource IconText}" Text="&#xE716;" FontSize="16" Foreground="{StaticResource PrimaryDarkBrush}"/>
+                </Border>
+                <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="HeaderTitle" Text="Add Supplier" FontSize="20" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="HeaderSubtitle" Text="Add a supplier you buy products from." Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+                </StackPanel>
+            </StackPanel>
+            <Button Style="{StaticResource IconButton}" Content="&#xE711;" HorizontalAlignment="Right" VerticalAlignment="Top"
+                    ToolTip="Close" Click="Cancel_Click"/>
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="28,22,28,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.ColumnSpan="3" Margin="0,0,0,14">
+                <TextBlock Text="Supplier Name *" Style="{StaticResource LabelText}"/>
+                <TextBox x:Name="NameBox" Tag="e.g. Cagayan Pet Supplies Trading" MaxLength="120"/>
+                <TextBlock x:Name="NameError" Style="{StaticResource ErrorText}"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" Margin="0,0,0,14">
+                <TextBlock Text="Contact Person *" Style="{StaticResource LabelText}"/>
+                <TextBox x:Name="ContactBox" Tag="Full name" MaxLength="120"/>
+                <TextBlock x:Name="ContactError" Style="{StaticResource ErrorText}"/>
+            </StackPanel>
+            <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,14">
+                <TextBlock Text="Phone Number *" Style="{StaticResource LabelText}"/>
+                <TextBox x:Name="PhoneBox" Tag="e.g. 0917 123 4567" MaxLength="30"/>
+                <TextBlock x:Name="PhoneError" Style="{StaticResource ErrorText}"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,0,0,14">
+                <TextBlock Text="Address *" Style="{StaticResource LabelText}"/>
+                <TextBox x:Name="AddressBox" Tag="Street, barangay, town / city, province" MaxLength="255"/>
+                <TextBlock x:Name="AddressError" Style="{StaticResource ErrorText}"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="3" Grid.ColumnSpan="3">
+                <TextBlock Text="Email Address (optional)" Style="{StaticResource LabelText}"/>
+                <TextBox x:Name="EmailBox" Tag="name@example.com" MaxLength="120"/>
+                <TextBlock x:Name="EmailError" Style="{StaticResource ErrorText}"/>
+                <Border Margin="0,12,0,0" CornerRadius="10" Background="#FBEAF1" Padding="12,9"
+                        Visibility="{Binding Visibility, ElementName=GeneralError}">
+                    <TextBlock x:Name="GeneralError" Style="{StaticResource ErrorText}" Margin="0"/>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="2" Style="{StaticResource DialogFooter}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Style="{StaticResource SecondaryButton}" Content="Cancel" MinWidth="110" IsCancel="True" Click="Cancel_Click"/>
+                <Button x:Name="SaveButton" Style="{StaticResource PrimaryButton}" Content="Save Supplier" MinWidth="130" Margin="10,0,0,0"
+                        IsDefault="True" Click="Save_Click"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

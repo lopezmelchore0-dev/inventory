@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>PetGroomingInventory</RootNamespace>
+    <AssemblyName>PawStock</AssemblyName>
+    <Product>PawStock - Pet Grooming Inventory</Product>
+    <UseWPF>true</UseWPF>
+    <OptionStrict>On</OptionStrict>
+    <OptionExplicit>On</OptionExplicit>
+    <OptionInfer>On</OptionInfer>
+    <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Import Include="System.Windows" />
+    <Import Include="System.Windows.Controls" />
+    <Import Include="System.Windows.Data" />
+    <Import Include="System.Windows.Documents" />
+    <Import Include="System.Windows.Input" />
+    <Import Include="System.Windows.Media" />
+    <Import Include="System.Windows.Media.Imaging" />
+    <Import Include="System.Windows.Navigation" />
+    <Import Include="System.Windows.Shapes" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Remove="Application.xaml" />
+    <ApplicationDefinition Include="Application.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+    <PackageReference Include="MySqlConnector" Version="2.4.0" />
+    <PackageReference Include="PDFsharp-MigraDoc" Version="6.2.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- UI smoke tests inspect the shell's named controls (sign-in gate). -->
+    <InternalsVisibleTo Include="PetGroomingInventory.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Single source of truth for the schema: the app runs it on startup. -->
+    <EmbeddedResource Include="..\..\database\schema.sql" LogicalName="PetGroomingInventory.schema.sql" Link="Data\schema.sql" />
+    <None Update="dbconfig.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

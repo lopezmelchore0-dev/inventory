@@ -1,0 +1,105 @@
+<Window x:Class="StockAdjustmentWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Style="{StaticResource DialogWindow}" Width="640" Title="Stock Adjustment">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Margin="28,24,18,0" Background="Transparent" MouseLeftButtonDown="Header_MouseLeftButtonDown">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="44" Height="44" CornerRadius="14" Background="{StaticResource LavenderBrush}">
+                    <TextBlock Style="{StaticResource IconText}" Text="&#xE8EF;" FontSize="16" Foreground="{StaticResource PrimaryDarkBrush}"/>
+                </Border>
+                <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Stock Adjustment" FontSize="20" FontWeight="SemiBold"/>
+                    <TextBlock Text="Correct inventory discrepancies. Every adjustment is recorded with its reason."
+                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+                </StackPanel>
+            </StackPanel>
+            <Button Style="{StaticResource IconButton}" Content="&#xE711;" HorizontalAlignment="Right" VerticalAlignment="Top"
+                    ToolTip="Close" Click="Cancel_Click"/>
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="28,22,28,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.ColumnSpan="3" Margin="0,0,0,12">
+                <TextBlock Text="Item *" Style="{StaticResource LabelText}"/>
+                <ComboBox x:Name="ItemBox" Tag="Select the item to adjust" DisplayMemberPath="DisplayName" SelectedValuePath="Id"
+                          IsTextSearchEnabled="True" TextSearch.TextPath="Name" SelectionChanged="Input_Changed"/>
+                <TextBlock x:Name="ItemError" Style="{StaticResource ErrorText}"/>
+            </StackPanel>
+
+            <Border Grid.Row="1" Grid.ColumnSpan="3" x:Name="CurrentPanel" Background="{StaticResource SurfaceAltBrush}" CornerRadius="12"
+                    Padding="14,10" Margin="0,0,0,14" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" Visibility="Collapsed">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Current stock:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock x:Name="CurrentText" FontWeight="SemiBold" Margin="6,0,0,0"/>
+                    </StackPanel>
+                    <ContentPresenter x:Name="CurrentBadge" HorizontalAlignment="Right" ContentTemplate="{StaticResource StockBadgeTemplate}"/>
+                </Grid>
+            </Border>
+
+            <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,0,0,14">
+                <TextBlock Text="Adjustment Type *" Style="{StaticResource LabelText}"/>
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton x:Name="ModeDeduct" Style="{StaticResource SegmentRadio}" GroupName="Mode" Content="Deduct stock" IsChecked="True" Checked="Input_Changed"/>
+                    <RadioButton x:Name="ModeAdd" Style="{StaticResource SegmentRadio}" GroupName="Mode" Content="Add stock" Checked="Input_Changed"/>
+                    <RadioButton x:Name="ModeSet" Style="{StaticResource SegmentRadio}" GroupName="Mode" Content="Set counted quantity" Checked="Input_Changed"/>
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Grid.Row="3" Margin="0,0,0,14">
+                <TextBlock x:Name="AmountLabel" Text="Quantity to deduct *" Style="{StaticResource LabelText}"/>
+                <TextBox x:Name="AmountBox" Tag="0" MaxLength="12" TextChanged="Input_Changed"/>
+                <TextBlock x:Name="AmountError" Style="{StaticResource ErrorText}"/>
+            </StackPanel>
+            <StackPanel Grid.Row="3" Grid.Column="2" Margin="0,0,0,14">
+                <TextBlock Text="Reason *" Style="{StaticResource LabelText}"/>
+                <ComboBox x:Name="ReasonBox" Tag="Select a reason" SelectionChanged="Input_Changed"/>
+                <TextBlock x:Name="ReasonError" Style="{StaticResource ErrorText}"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="4" Grid.ColumnSpan="3">
+                <TextBlock x:Name="NoteLabel" Text="Note (optional)" Style="{StaticResource LabelText}"/>
+                <TextBox x:Name="NoteBox" Tag="Additional details about this adjustment" MaxLength="255"/>
+                <TextBlock x:Name="NoteError" Style="{StaticResource ErrorText}"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="5" Grid.ColumnSpan="3">
+                <Border x:Name="PreviewPanel" Margin="0,14,0,0" CornerRadius="12" Background="{StaticResource LavenderBrush}" Padding="14,10" Visibility="Collapsed">
+                    <TextBlock x:Name="PreviewText" Foreground="{StaticResource PrimaryDarkBrush}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                </Border>
+                <Border Margin="0,12,0,0" CornerRadius="10" Background="#FBEAF1" Padding="12,9"
+                        Visibility="{Binding Visibility, ElementName=GeneralError}">
+                    <TextBlock x:Name="GeneralError" Style="{StaticResource ErrorText}" Margin="0"/>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="2" Style="{StaticResource DialogFooter}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Style="{StaticResource SecondaryButton}" Content="Cancel" MinWidth="110" IsCancel="True" Click="Cancel_Click"/>
+                <Button Style="{StaticResource PrimaryButton}" Content="Apply Adjustment" MinWidth="150" Margin="10,0,0,0"
+                        IsDefault="True" Click="Save_Click"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
