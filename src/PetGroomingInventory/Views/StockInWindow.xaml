@@ -40,8 +40,8 @@
 
             <StackPanel Grid.ColumnSpan="3" Margin="0,0,0,12">
                 <TextBlock Text="Item *" Style="{StaticResource LabelText}"/>
-                <ComboBox x:Name="ItemBox" Tag="Select the item you received" DisplayMemberPath="DisplayName" SelectedValuePath="Id"
-                          IsTextSearchEnabled="True" TextSearch.TextPath="Name" SelectionChanged="ItemBox_SelectionChanged"/>
+                <ComboBox x:Name="ItemBox" Style="{StaticResource ItemSearchComboBox}" Tag="Search or select the item you received"
+                          SelectedValuePath="Id" SelectionChanged="ItemBox_SelectionChanged"/>
                 <TextBlock x:Name="ItemError" Style="{StaticResource ErrorText}"/>
             </StackPanel>
 
@@ -52,6 +52,7 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="Current stock:" Foreground="{StaticResource TextSecondaryBrush}"/>
                         <TextBlock x:Name="CurrentText" FontWeight="SemiBold" Margin="6,0,0,0"/>
+                        <TextBlock x:Name="CurrentDetails" Foreground="{StaticResource TextSecondaryBrush}" Margin="12,0,0,0"/>
                     </StackPanel>
                     <ContentPresenter x:Name="CurrentBadge" HorizontalAlignment="Right" ContentTemplate="{StaticResource StockBadgeTemplate}"/>
                 </Grid>

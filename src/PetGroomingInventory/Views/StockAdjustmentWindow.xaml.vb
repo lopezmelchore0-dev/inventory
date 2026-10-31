@@ -24,7 +24,7 @@ Class StockAdjustmentWindow
         Dim snapshot = InventoryService.LoadSnapshot()
         _items = snapshot.Items
         _settings = snapshot.Settings
-        ItemBox.ItemsSource = _items
+        ItemSearchBox.Attach(ItemBox, _items)
         ReasonBox.ItemsSource = StockService.AdjustmentReasons
         If preselectItemId.HasValue Then ItemBox.SelectedValue = preselectItemId.Value
 
@@ -78,6 +78,7 @@ Class StockAdjustmentWindow
         End If
         CurrentPanel.Visibility = Visibility.Visible
         CurrentText.Text = item.QuantityText
+        CurrentDetails.Text = item.PickerDetails
         CurrentBadge.Content = item
 
         Dim amount As Decimal

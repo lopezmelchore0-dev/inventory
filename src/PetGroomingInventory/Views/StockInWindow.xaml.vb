@@ -21,7 +21,7 @@
         _errors.Register("note", NoteError, NoteBox)
 
         _items = InventoryService.GetItems()
-        ItemBox.ItemsSource = _items
+        ItemSearchBox.Attach(ItemBox, _items)
 
         ' First entry lets the user record stock without a supplier (e.g. a transfer or donation).
         Dim suppliers As New List(Of Supplier) From {New Supplier With {.Id = 0, .Name = "— Not specified —"}}
@@ -51,6 +51,7 @@
         Else
             CurrentPanel.Visibility = Visibility.Visible
             CurrentText.Text = item.QuantityText
+            CurrentDetails.Text = item.PickerDetails
             CurrentBadge.Content = item
             SupplierBox.SelectedValue = item.SupplierId
         End If

@@ -91,10 +91,10 @@ Public Class Item
         End Get
     End Property
 
-    ''' <summary>Label used in item pickers.</summary>
-    Public ReadOnly Property DisplayName As String
+    ''' <summary>Secondary line in item pickers: size or variant and category, e.g. "500 ml · Shampoo".</summary>
+    Public ReadOnly Property PickerDetails As String
         Get
-            Return $"{Name}  ({QuantityText})"
+            Return String.Join(" · ", {Description, CategoryName}.Where(Function(s) Not String.IsNullOrWhiteSpace(s)).Select(Function(s) s.Trim()))
         End Get
     End Property
 End Class

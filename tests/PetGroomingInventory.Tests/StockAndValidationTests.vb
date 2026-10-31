@@ -106,6 +106,30 @@ Public Class StockAndValidationTests
     End Sub
 
     <Theory>
+    <InlineData("", True)>
+    <InlineData("   ", True)>
+    <InlineData("sham", True)>                  ' part of a word
+    <InlineData("OATMEAL", True)>               ' any case
+    <InlineData("dog oat", True)>               ' every keyword, in any order
+    <InlineData("  shampoo   dog ", True)>
+    <InlineData("dog cat", False)>              ' one keyword missing
+    <InlineData("500 ml", True)>                ' description (size)
+    <InlineData("bath", True)>                  ' category
+    <InlineData("conditioner", False)>
+    Public Sub ItemSearch_MatchesEveryKeywordInNameDescriptionOrCategory(typed As String, expected As Boolean)
+        Dim item As New Item With {.Name = "Oatmeal Dog Shampoo", .Description = "500 ml", .CategoryName = "Bath Supplies"}
+        Assert.Equal(expected, ItemSearchBox.Matches(item, typed))
+    End Sub
+
+    <Fact>
+    Public Sub ItemSearch_HandlesItemsWithoutDescription()
+        Dim item As New Item With {.Name = "Slicker Brush", .Description = Nothing, .CategoryName = "Tools"}
+        Assert.True(ItemSearchBox.Matches(item, "brush"))
+        Assert.False(ItemSearchBox.Matches(item, "500"))
+        Assert.Equal("Tools", item.PickerDetails)
+    End Sub
+
+    <Theory>
     <InlineData("Medicine", True)>
     <InlineData("Vitamins", True)>
     <InlineData("Pet Food & Treats", True)>

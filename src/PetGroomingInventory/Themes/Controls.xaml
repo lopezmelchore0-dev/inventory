@@ -1000,6 +1000,85 @@
         </Border>
     </DataTemplate>
 
+    <!-- Searchable item picker (see ItemSearchBox.vb): one row per item, then the editable ComboBox that lists them -->
+    <DataTemplate x:Key="ItemPickerRowTemplate">
+        <Grid MinWidth="380">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding PickerDetails, Mode=OneWay}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                           TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
+                <TextBlock Text="{Binding QuantityText, Mode=OneWay}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource StockBadgeTemplate}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
+    <Style x:Key="ItemSearchComboBox" TargetType="ComboBox" BasedOn="{StaticResource EditableComboBox}">
+        <Setter Property="Padding" Value="38,9,34,9"/>
+        <Setter Property="ItemTemplate" Value="{StaticResource ItemPickerRowTemplate}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <ToggleButton x:Name="Toggle" Style="{StaticResource ComboToggle}"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"/>
+                        <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="13" Margin="14,0,0,0"
+                                   HorizontalAlignment="Left" VerticalAlignment="Center" IsHitTestVisible="False"
+                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBox x:Name="PART_EditableTextBox" Style="{StaticResource ComboEditText}"
+                                 Margin="{TemplateBinding Padding}" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="Placeholder" Text="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
+                                   Margin="{TemplateBinding Padding}" Foreground="{StaticResource TextMutedBrush}"
+                                   IsHitTestVisible="False" VerticalAlignment="Center" Visibility="Collapsed"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}"
+                               AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
+                            <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource CardBorderBrush}"
+                                    BorderThickness="1" CornerRadius="12" Margin="0,4,8,8" Padding="6"
+                                    MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                    MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="16" ShadowDepth="3" Opacity="0.12" Color="#8A3A68"/>
+                                </Border.Effect>
+                                <Grid>
+                                    <!-- Virtualized so a large inventory opens and filters quickly -->
+                                    <ScrollViewer SnapsToDevicePixels="True" VerticalScrollBarVisibility="Auto" CanContentScroll="True">
+                                        <VirtualizingStackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                    <StackPanel x:Name="NoMatches" Orientation="Horizontal" Margin="10,8" Visibility="Collapsed">
+                                        <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="12" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource TextMutedBrush}" Margin="0,0,8,0"/>
+                                        <TextBlock Text="No matching items found" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Text" Value="">
+                            <Setter TargetName="Placeholder" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="HasItems" Value="False">
+                            <Setter TargetName="NoMatches" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.55"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <DataTemplate x:Key="ExpiryCellTemplate">
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
             <TextBlock Text="{Binding ExpirationText, Mode=OneWay}" VerticalAlignment="Center"/>

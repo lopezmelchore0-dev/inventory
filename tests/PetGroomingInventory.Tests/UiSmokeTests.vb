@@ -2,6 +2,8 @@ Imports System.Reflection
 Imports System.Threading
 Imports System.Windows
 Imports System.Windows.Controls
+Imports System.Windows.Input
+Imports System.Windows.Threading
 Imports Xunit
 
 ''' <summary>
@@ -116,6 +118,7 @@ Public Class UiSmokeTests
         Assert.True(DirectCast(dialogs(4), StockInWindow).HasItems)
 
         CheckDescriptionBox()
+        CheckItemSearchBox()
 
         ' ---- Logout path: session ends, cached pages are dropped, Login is shown ----
         AuthService.Logout()
@@ -216,7 +219,144 @@ Public Class UiSmokeTests
         End Try
     End Sub
 
-    Private Shared Function ShowOffScreen(window As ItemEditorWindow) As ItemEditorWindow
+    ''' <summary>
+    ''' The Item field of Stock Adjustment and Stock In is a searchable picker: it lists every item on focus, narrows as the
+    ''' user types, says when nothing matches, and only a picked item (never typed text alone) is submitted.
+    ''' </summary>
+    Private Shared Sub CheckItemSearchBox()
+        Dim all = InventoryService.GetItems()
+        Dim target = all.First(Function(i) i.Name.Length >= 6 AndAlso
+                                           all.Where(Function(j) String.Equals(j.Name, i.Name, StringComparison.OrdinalIgnoreCase)).Count() = 1)
+        Dim fragment = target.Name.Substring(1, 4).ToLowerInvariant()   ' part of the name, in the wrong case
+        Dim pump = Sub() Dispatcher.CurrentDispatcher.Invoke(Sub() Exit Sub, Threading.DispatcherPriority.Background)
+
+        Dim adjust = ShowOffScreen(New StockAdjustmentWindow(Nothing))
+        Try
+            Dim combo = adjust.ItemBox
+            Dim box = DirectCast(combo.Template.FindName("PART_EditableTextBox", combo), TextBox)
+            Dim visible = Function() combo.Items.Cast(Of Item)().ToList()
+            Dim focusBox =
+                Sub()
+                    adjust.Activate()
+                    box.Focus()
+                    Assert.True(box.IsKeyboardFocused, "The item search box should take keyboard focus")
+                End Sub
+            Dim typeText =
+                Sub(text As String)
+                    focusBox()
+                    box.Text = text
+                    pump()
+                End Sub
+
+            Assert.True(combo.IsEditable)
+            Assert.Equal("", combo.Text)
+            Assert.Null(combo.SelectedItem)
+            focusBox()
+            pump()
+            Assert.True(combo.IsDropDownOpen, "Focusing the field should list the items")
+            Assert.Equal(all.Count, visible().Count)
+
+            ' Arrow keys move through the list without narrowing it; Enter picks the highlighted item.
+            PressKey(box, Key.Down)
+            PressKey(box, Key.Down)
+            pump()
+            Assert.Equal(all.Count, visible().Count)
+            PressKey(box, Key.Enter)
+            pump()
+            Dim arrowPick = TryCast(combo.SelectedItem, Item)
+            Assert.NotNull(arrowPick)
+            Assert.Equal(arrowPick.Name, combo.Text)
+
+            typeText(fragment)                                   ' typing narrows the list and drops the earlier pick
+            Assert.Contains(visible(), Function(i) i.Id = target.Id)
+            Assert.All(visible(), Sub(i) Assert.True(ItemSearchBox.Matches(i, fragment)))
+            Assert.Equal(fragment, combo.Text)
+            Assert.Null(combo.SelectedItem)
+            Assert.Equal(Visibility.Collapsed, adjust.CurrentPanel.Visibility)
+
+            typeText("zzqx no such item")                        ' nothing matches: the list stays open with a message
+            Assert.Empty(visible())
+            Assert.True(combo.IsDropDownOpen)
+            Assert.Equal(Visibility.Visible, DirectCast(combo.Template.FindName("NoMatches", combo), FrameworkElement).Visibility)
+
+            ' Typed text that isn't a picked item is rejected by the existing validation.
+            GetType(StockAdjustmentWindow).GetMethod("Save_Click", BindingFlags.NonPublic Or BindingFlags.Instance).
+                Invoke(adjust, {Nothing, Nothing})
+            Assert.Equal("Select the item to adjust.", adjust.ItemError.Text)
+
+            typeText("")                                         ' cleared: every item is offered again
+            Assert.Equal(all.Count, visible().Count)
+
+            typeText(fragment)                                   ' Enter with nothing highlighted picks the first match
+            Dim first = visible().First()
+            PressKey(box, Key.Enter)
+            pump()
+            Assert.Equal(first.Id, CInt(combo.SelectedValue))
+            Assert.Equal(first.Name, combo.Text)
+            Assert.False(combo.IsDropDownOpen)
+            Assert.Equal(Visibility.Visible, adjust.CurrentPanel.Visibility)
+            Assert.Equal(first.QuantityText, adjust.CurrentText.Text)
+            Assert.Equal(all.Count, visible().Count)             ' after a pick, the next open lists everything
+
+            combo.SelectedValue = target.Id                      ' a mouse pick: the name fills the field, the id is kept
+            pump()
+            Assert.Equal(target.Name, combo.Text)
+            Assert.Equal(target.Id, CInt(combo.SelectedValue))
+            Assert.Equal(target.PickerDetails, adjust.CurrentDetails.Text)
+
+            typeText(target.Name.ToUpperInvariant())             ' an exact name typed, then leaving the field, selects it
+            Assert.Null(combo.SelectedItem)
+            adjust.AmountBox.Focus()
+            pump()
+            Assert.Equal(target.Id, CInt(combo.SelectedValue))
+            Assert.Equal(target.Name, combo.Text)
+        Finally
+            adjust.Close()
+        End Try
+
+        ' Opened for a specific item: that item is picked and the full list is still available.
+        Dim preselected = ShowOffScreen(New StockAdjustmentWindow(target.Id))
+        Try
+            Assert.Equal(target.Name, preselected.ItemBox.Text)
+            Assert.Equal(target.Id, CInt(preselected.ItemBox.SelectedValue))
+            Assert.Equal(all.Count, preselected.ItemBox.Items.Count)
+        Finally
+            preselected.Close()
+        End Try
+
+        ' Stock In uses the same picker; picking an item still fills in its supplier.
+        Dim stockIn = ShowOffScreen(New StockInWindow(Nothing))
+        Try
+            Dim combo = stockIn.ItemBox
+            Dim box = DirectCast(combo.Template.FindName("PART_EditableTextBox", combo), TextBox)
+            stockIn.Activate()
+            box.Focus()
+            box.Text = fragment
+            pump()
+            Assert.All(combo.Items.Cast(Of Item)(), Sub(i) Assert.True(ItemSearchBox.Matches(i, fragment)))
+            Assert.Null(combo.SelectedItem)
+            Dim first = combo.Items.Cast(Of Item)().First()
+            PressKey(box, Key.Enter)
+            pump()
+            Assert.Equal(first.Id, CInt(combo.SelectedValue))
+            Assert.Equal(Visibility.Visible, stockIn.CurrentPanel.Visibility)
+            Assert.Equal(first.SupplierId, CInt(stockIn.SupplierBox.SelectedValue))
+        Finally
+            stockIn.Close()
+        End Try
+    End Sub
+
+    ''' <summary>Sends a key press to the focused element the way the keyboard would (preview first, then the bubbling event).</summary>
+    Private Shared Sub PressKey(target As UIElement, pressed As Key)
+        Dim source = PresentationSource.FromVisual(target)
+        For Each routed In {Keyboard.PreviewKeyDownEvent, Keyboard.KeyDownEvent}
+            Dim args As New KeyEventArgs(Keyboard.PrimaryDevice, source, 0, pressed) With {.RoutedEvent = routed}
+            target.RaiseEvent(args)
+            If args.Handled Then Exit For
+        Next
+    End Sub
+
+    Private Shared Function ShowOffScreen(Of T As Window)(window As T) As T
         window.WindowStartupLocation = WindowStartupLocation.Manual
         window.Left = -10000
         window.Top = -10000
