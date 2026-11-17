@@ -23,12 +23,7 @@ Class InventoryView
             New FilterOption("Not expiring soon", ExpirationStatus.Ok),
             New FilterOption("No expiration date", ExpirationStatus.None)
         }
-        PetTypeFilter.ItemsSource = New List(Of FilterOption) From {
-            New FilterOption("All pet types", Nothing),
-            New FilterOption("Dog", PetTypes.Dog),
-            New FilterOption("Cat", PetTypes.Cat),
-            New FilterOption("Dog & Cat only", PetTypes.Both)
-        }
+        PetTypeFilter.ItemsSource = PetTypes.FilterOptions(PetTypes.All)
         StatusFilter.SelectedIndex = 0
         ExpiryFilter.SelectedIndex = 0
         PetTypeFilter.SelectedIndex = 0
@@ -45,10 +40,12 @@ Class InventoryView
         ApplyFilters()
     End Sub
 
-    ''' <summary>Rebuilds the category and supplier drop-downs, keeping the current selection when it still exists.</summary>
+    ''' <summary>Rebuilds the category, pet type and supplier drop-downs, keeping the current selection when it still exists.</summary>
     Private Sub RefreshLookupFilters()
         _updatingFilters = True
         Try
+            ReplaceOptions(PetTypeFilter, PetTypes.FilterOptions(_items.Select(Function(i) i.PetType)))
+
             Dim categories = New List(Of FilterOption) From {New FilterOption("All categories", Nothing)}
             categories.AddRange(LookupService.GetAll(LookupKind.Category).Select(Function(c) New FilterOption(c.Name, c.Id)))
             ReplaceOptions(CategoryFilter, categories)

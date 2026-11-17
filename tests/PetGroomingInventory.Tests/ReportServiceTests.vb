@@ -198,6 +198,48 @@ Public Class ReportServiceTests
     End Sub
 
     <Fact>
+    Public Sub PetType_ListsCustomPetTypes_AndKeepsThemOutOfDogAndCat()
+        Dim items = ItemsWithCustomPetTypes()
+        Dim report = ReportService.Build(New ReportCriteria With {.Type = ReportType.PetType}, items, Transactions(), New AppSettings(), Categories, Now)
+        Dim table = report.Tables.Single()
+        ' "rabbit" and "Rabbit" are one pet type (in the database the service also saves them with one spelling).
+        Dim counts = table.Rows.ToDictionary(Function(r) CStr(r(0)), Function(r) CInt(r(1)), StringComparer.OrdinalIgnoreCase)
+        Assert.Equal({"Dog", "Cat", "Dog & Cat", "Bird", "Rabbit"}, counts.Keys, StringComparer.OrdinalIgnoreCase)   ' built-ins first, then custom types A–Z
+        Assert.Equal(2, counts("Rabbit"))
+        Assert.Equal(1, counts("Bird"))
+        Assert.Equal(8, table.Totals(1))
+        Assert.Equal(counts.Values.Sum(), table.Totals(1))
+        Assert.Equal(3, Stat(report, "Usable for dogs (Dog + Dog & Cat)"))
+        Assert.Equal(3, Stat(report, "Usable for cats (Cat + Dog & Cat)"))
+        Assert.Equal(3, Stat(report, "Other pet types"))
+    End Sub
+
+    <Fact>
+    Public Sub PetTypeFilter_CustomTypeMatchesOnlyItsOwnItems()
+        Dim items = ItemsWithCustomPetTypes()
+        Dim build = Function(petType As String) ReportService.Build(
+            New ReportCriteria With {.Type = ReportType.LowStock, .PetType = petType}, items, Transactions(), New AppSettings(), Categories, Now)
+
+        Dim rabbits = ReportService.Build(New ReportCriteria With {.Type = ReportType.PetType, .PetType = "Rabbit"}, items, Transactions(), New AppSettings(), Categories, Now)
+        Assert.Equal({"Rabbit"}, rabbits.Tables.Single().Rows.Select(Function(r) CStr(r(0))), StringComparer.OrdinalIgnoreCase)
+        Assert.Equal(2, rabbits.Tables.Single().Totals(1))
+        Assert.Contains("Pet type: Rabbit", rabbits.FilterText)
+
+        Dim dogs = ReportService.Build(New ReportCriteria With {.Type = ReportType.PetType, .PetType = PetTypes.Dog}, items, Transactions(), New AppSettings(), Categories, Now)
+        Assert.Equal({"Dog", "Dog & Cat"}, dogs.Tables.Single().Rows.Select(Function(r) CStr(r(0))))
+        Assert.Contains("(includes Dog & Cat items)", dogs.FilterText)
+        Assert.DoesNotContain(Names(build(PetTypes.Dog)), Function(n) n.StartsWith("Rabbit"))
+    End Sub
+
+    Private Shared Function ItemsWithCustomPetTypes() As List(Of Item)
+        Dim list = Items()
+        list.Add(MakeItem(6, "Rabbit Pellets", 4, "Rabbit", 4D, 90D, New Date(2026, 10, 2)))
+        list.Add(MakeItem(7, "Rabbit Brush", 3, "rabbit", 2D, 60D, New Date(2026, 10, 3)))
+        list.Add(MakeItem(8, "Bird Seed", 4, "Bird", 30D, 40D, New Date(2026, 10, 4)))
+        Return list
+    End Function
+
+    <Fact>
     Public Sub Movement_UsesTransactionDates_AndTotalsAddedAndDeducted()
         Dim report = Run(ReportType.Movement)
         Dim table = report.Tables.Single()

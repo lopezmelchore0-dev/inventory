@@ -83,10 +83,22 @@ Public Class BackupValidationTests
 
     <Fact>
     Public Sub InvalidPetType_IsRejected()
+        For Each bad In {"", "   ", New String("x"c, PetTypes.MaxLength + 1)}
+            Dim file = ValidBackup()
+            file.Data.Items(0).PetType = bad
+            file.Checksum = BackupService.ComputeChecksum(file.Data)
+            Assert.Contains(BackupService.Validate(file), Function(e) e.Contains("invalid pet type"))
+        Next
+    End Sub
+
+    <Fact>
+    Public Sub CustomPetType_IsAccepted()
         Dim file = ValidBackup()
         file.Data.Items(0).PetType = "Bird"
         file.Checksum = BackupService.ComputeChecksum(file.Data)
-        Assert.Contains(BackupService.Validate(file), Function(e) e.Contains("invalid pet type"))
+        Dim restored = System.Text.Json.JsonSerializer.Deserialize(Of BackupFile)(System.Text.Json.JsonSerializer.Serialize(file))
+        Assert.Equal("Bird", restored.Data.Items(0).PetType)
+        Assert.Empty(BackupService.Validate(restored))
     End Sub
 
     <Fact>

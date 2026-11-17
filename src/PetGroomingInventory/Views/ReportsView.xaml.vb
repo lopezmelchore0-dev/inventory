@@ -16,34 +16,35 @@ Class ReportsView
 
         _updating = True
         TypeBox.ItemsSource = ReportTypes.All.Select(Function(t) New FilterOption(ReportTypes.Title(t), t)).ToList()
-        PetTypeBox.ItemsSource = New List(Of FilterOption) From {
-            New FilterOption("All pet types", Nothing),
-            New FilterOption("Dog", PetTypes.Dog),
-            New FilterOption("Cat", PetTypes.Cat),
-            New FilterOption("Dog & Cat only", PetTypes.Both)
-        }
+        PetTypeBox.ItemsSource = PetTypes.FilterOptions(PetTypes.All)
         CategoryBox.ItemsSource = New List(Of FilterOption) From {New FilterOption("All categories", Nothing)}
         _updating = False
         ResetFilters()
     End Sub
 
     Protected Overrides Sub LoadData()
-        RefreshCategories()
+        RefreshFilters()
         ' Keep the report on screen in step with the data, e.g. after a Stock In elsewhere.
         If _report IsNot Nothing AndAlso Not _busy Then ShowReport(ReportService.Generate(_report.Criteria))
     End Sub
 
-    Private Sub RefreshCategories()
+    ''' <summary>Rebuilds the category and pet type drop-downs, keeping the current selection when it still exists.</summary>
+    Private Sub RefreshFilters()
         _updating = True
         Try
-            Dim previous = SelectedValue(CategoryBox)
-            Dim options As New List(Of FilterOption) From {New FilterOption("All categories", Nothing)}
-            options.AddRange(LookupService.GetAll(LookupKind.Category).Select(Function(c) New FilterOption(c.Name, c.Id)))
-            CategoryBox.ItemsSource = options
-            CategoryBox.SelectedItem = If(options.FirstOrDefault(Function(o) Object.Equals(o.Value, previous)), options(0))
+            Dim categories As New List(Of FilterOption) From {New FilterOption("All categories", Nothing)}
+            categories.AddRange(LookupService.GetAll(LookupKind.Category).Select(Function(c) New FilterOption(c.Name, c.Id)))
+            ReplaceOptions(CategoryBox, categories)
+            ReplaceOptions(PetTypeBox, PetTypes.FilterOptions(InventoryService.GetPetTypesInUse()))
         Finally
             _updating = False
         End Try
+    End Sub
+
+    Private Shared Sub ReplaceOptions(combo As ComboBox, options As List(Of FilterOption))
+        Dim previous = SelectedValue(combo)
+        combo.ItemsSource = options
+        combo.SelectedItem = If(options.FirstOrDefault(Function(o) Object.Equals(o.Value, previous)), options(0))
     End Sub
 
     ' ===================== Filters =====================

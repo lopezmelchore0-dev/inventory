@@ -19,6 +19,8 @@ Public Class StockTransaction
     Public Property QtyChange As Decimal
     Public Property QtyBefore As Decimal
     Public Property QtyAfter As Decimal
+    ''' <summary>The item's unit when the change was made (falls back to the item's current unit for older records).</summary>
+    Public Property Unit As String
     Public Property SupplierId As Integer?
     Public Property SupplierName As String
     Public Property TxnDate As Date
@@ -50,13 +52,13 @@ Public Class StockTransaction
 
     Public ReadOnly Property ChangeText As String
         Get
-            Return Fmt.SignedQty(QtyChange)
+            Return Fmt.SignedQty(QtyChange, Unit)
         End Get
     End Property
 
     Public ReadOnly Property BeforeAfterText As String
         Get
-            Return $"{Fmt.Qty(QtyBefore)} → {Fmt.Qty(QtyAfter)}"
+            Return $"{Fmt.Qty(QtyBefore)} → {Fmt.Qty(QtyAfter, Unit)}"
         End Get
     End Property
 
@@ -109,6 +111,8 @@ End Class
 Public Class DashboardSummary
     Public Property TotalItems As Integer
     Public Property AvailableStock As Decimal
+    ''' <summary>Stock on hand totalled per unit, e.g. "120 pcs · 3,500 ml".</summary>
+    Public Property StockByUnit As String = "0"
     Public Property InStock As Integer
     Public Property LowStock As Integer
     Public Property CriticalStock As Integer

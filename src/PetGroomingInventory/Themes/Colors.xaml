@@ -58,6 +58,8 @@
     <SolidColorBrush x:Key="PetCatFgBrush" Color="#6A43A8"/>
     <SolidColorBrush x:Key="PetBothBgBrush" Color="#FCE4F0"/>
     <SolidColorBrush x:Key="PetBothFgBrush" Color="#A9437F"/>
+    <SolidColorBrush x:Key="PetOtherBgBrush" Color="#E2F3F7"/>
+    <SolidColorBrush x:Key="PetOtherFgBrush" Color="#1F6E80"/>
 
     <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 

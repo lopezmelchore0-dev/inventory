@@ -69,7 +69,16 @@
 
             <StackPanel Grid.Row="3" Margin="0,0,0,14">
                 <TextBlock x:Name="AmountLabel" Text="Quantity to deduct *" Style="{StaticResource LabelText}"/>
-                <TextBox x:Name="AmountBox" Tag="0" MaxLength="12" TextChanged="Input_Changed"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="AmountBox" Tag="0" MaxLength="12" TextChanged="Input_Changed"/>
+                    <!-- The selected item's unit: adjustments are always counted in it -->
+                    <TextBlock x:Name="UnitSuffix" Grid.Column="1" Margin="10,0,2,0" MaxWidth="120" VerticalAlignment="Center"
+                               FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
+                </Grid>
                 <TextBlock x:Name="AmountError" Style="{StaticResource ErrorText}"/>
             </StackPanel>
             <StackPanel Grid.Row="3" Grid.Column="2" Margin="0,0,0,14">

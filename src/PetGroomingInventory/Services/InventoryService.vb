@@ -34,6 +34,7 @@ Public NotInheritable Class InventoryService
         Return New DashboardSummary With {
             .TotalItems = items.Count(),
             .AvailableStock = items.Sum(Function(i) i.Quantity),
+            .StockByUnit = Fmt.QtyByUnit(items.Select(Function(i) (Qty:=i.Quantity, Unit:=i.Unit))),
             .InStock = items.Count(Function(i) i.Status = StockStatus.InStock),
             .LowStock = items.Count(Function(i) i.Status = StockStatus.LowStock),
             .CriticalStock = items.Count(Function(i) i.Status = StockStatus.CriticalStock),
@@ -56,6 +57,40 @@ Public NotInheritable Class InventoryService
         Return MergeSuggestions(DescriptionSuggestions.Defaults, used)
     End Function
 
+    ''' <summary>Suggestions for the Unit box: the predefined units, "Other (Custom Unit)", then custom units already used by items.</summary>
+    Public Shared Function GetUnitSuggestions() As List(Of String)
+        Dim used As List(Of String)
+        Using conn = Db.Open()
+            used = ItemRepository.GetDistinctUnits(conn)
+        End Using
+        ' Used predefined units appear as their short value ("pcs"); show them once, as their label.
+        Return MergeSuggestions(MeasurementUnits.Labels, used.Select(AddressOf MeasurementUnits.LabelFor))
+    End Function
+
+    ''' <summary>Suggestions for the Pet Type box: Dog, Cat, Both (Dog &amp; Cat), "Other (Custom Pet Type)", then custom pet types already used by items.</summary>
+    Public Shared Function GetPetTypeSuggestions() As List(Of String)
+        Dim defaults = PetTypes.All.Select(AddressOf PetTypes.EditorLabel).Concat({PetTypes.OtherLabel})
+        Return MergeSuggestions(defaults, GetPetTypesInUse().Where(Function(p) Not PetTypes.IsBuiltIn(p)))
+    End Function
+
+    ''' <summary>The built-in pet types followed by the custom pet types used by items, for the pet type filters.</summary>
+    Public Shared Function GetPetTypesInUse() As List(Of String)
+        Using conn = Db.Open()
+            Return PetTypes.Ordered(ItemRepository.GetDistinctPetTypes(conn, Nothing))
+        End Using
+    End Function
+
+    ''' <summary>
+    ''' A custom pet type that matches one already in use (ignoring case) takes the saved spelling, so "rabbit" and
+    ''' "Rabbit" are not listed as two pet types.
+    ''' </summary>
+    Private Shared Function MatchExistingPetType(conn As MySqlConnection, tx As MySqlTransaction, petType As String) As String
+        If petType Is Nothing OrElse PetTypes.IsBuiltIn(petType) Then Return petType
+        Dim existing = ItemRepository.GetDistinctPetTypes(conn, tx).
+            FirstOrDefault(Function(p) String.Equals(p, petType, StringComparison.OrdinalIgnoreCase))
+        Return If(existing, petType)
+    End Function
+
     ''' <summary>Defaults first, then the extras; duplicates (ignoring case) are dropped and the first spelling wins.</summary>
     Public Shared Function MergeSuggestions(defaults As IEnumerable(Of String), extras As IEnumerable(Of String)) As List(Of String)
         Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
@@ -67,7 +102,7 @@ Public NotInheritable Class InventoryService
         Return result
     End Function
 
-    ''' <summary>Field-level validation shared by the form and the service. Keys: name, category, pettype, supplier, quantity, price, expiration, description.</summary>
+    ''' <summary>Field-level validation shared by the form and the service. Keys: name, category, pettype, supplier, quantity, unit, price, expiration, description.</summary>
     Public Shared Function Validate(item As Item) As Dictionary(Of String, String)
         Dim errors As New Dictionary(Of String, String)
         Dim name = If(item.Name, "").Trim()
@@ -77,11 +112,33 @@ Public NotInheritable Class InventoryService
             errors("name") = "Item name must be 150 characters or fewer."
         End If
         If item.CategoryId <= 0 Then errors("category") = "Select a category."
-        If Not PetTypes.IsValid(item.PetType) Then errors("pettype") = "Select who this item is for (Dog, Cat or Both)."
+        Dim petType = If(item.PetType, "").Trim()
+        If petType.Length = 0 Then
+            errors("pettype") = "Select or type who this item is for (e.g. Dog, Cat, Rabbit)."
+        ElseIf petType.Length > PetTypes.MaxLength Then
+            errors("pettype") = $"Pet type must be {PetTypes.MaxLength} characters or fewer."
+        End If
         If item.SupplierId <= 0 Then errors("supplier") = "Select a supplier (or add a new one)."
 
+        Dim unit = If(item.Unit, "").Trim()
+        If unit.Length = 0 Then
+            errors("unit") = "Select a unit, or choose ""Other (Custom Unit)"" and type your own."
+        ElseIf unit.Length > MeasurementUnits.MaxLength Then
+            errors("unit") = $"Unit must be {MeasurementUnits.MaxLength} characters or fewer."
+        End If
+
         Dim qtyError = InputValidator.CheckAmount(item.Quantity, "Quantity", allowZero:=True)
-        If qtyError IsNot Nothing Then errors("quantity") = qtyError
+        If qtyError IsNot Nothing Then
+            errors("quantity") = qtyError
+        ElseIf InputValidator.CheckWholeForUnit(item.Quantity, unit, "Quantity") IsNot Nothing Then
+            ' A new item's quantity is typed in the form; an existing item's stock can only change through stock in / adjustment.
+            If item.Id = 0 Then
+                errors("quantity") = InputValidator.CheckWholeForUnit(item.Quantity, unit, "Quantity")
+            ElseIf Not errors.ContainsKey("unit") Then
+                errors("unit") = $"The stock on hand ({Fmt.Qty(item.Quantity)}) is not a whole number, so it cannot be counted in " &
+                                 $"{MeasurementUnits.Display(unit, 2D)}. Adjust the stock first, or choose another unit."
+            End If
+        End If
         Dim priceError = InputValidator.CheckAmount(item.RetailPrice, "Retail price", allowZero:=True)
         If priceError IsNot Nothing Then errors("price") = priceError
 
@@ -95,6 +152,8 @@ Public NotInheritable Class InventoryService
     End Function
 
     Public Shared Function AddItem(input As Item) As Integer
+        input.Unit = MeasurementUnits.Normalize(input.Unit)
+        input.PetType = PetTypes.Normalize(input.PetType)
         Dim errors = Validate(input)
         If errors.Count > 0 Then Throw New InputValidationException(errors)
 
@@ -105,6 +164,7 @@ Public NotInheritable Class InventoryService
                     If ItemRepository.NameExists(conn, tx, input.Name, 0) Then
                         Throw New InputValidationException("name", "An item with this name already exists.")
                     End If
+                    input.PetType = MatchExistingPetType(conn, tx, input.PetType)
                     Dim refs = LoadReferences(conn, tx, input)
 
                     newId = ItemRepository.Insert(conn, tx, input)
@@ -116,6 +176,7 @@ Public NotInheritable Class InventoryService
                             .QtyChange = input.Quantity,
                             .QtyBefore = 0D,
                             .QtyAfter = input.Quantity,
+                            .Unit = input.Unit,
                             .SupplierId = input.SupplierId,
                             .SupplierName = refs.Supplier,
                             .TxnDate = Date.Today,
@@ -123,7 +184,7 @@ Public NotInheritable Class InventoryService
                         })
                     End If
                     ActivityRepository.Log(conn, tx, input.Name.Trim(), ActivityTypes.ItemAdded,
-                        $"Added with {Fmt.Qty(input.Quantity)}{If(String.IsNullOrWhiteSpace(input.Description), "", " (" & input.Description.Trim() & ")")} at {Fmt.Money(input.RetailPrice)} ({refs.Category} · {PetTypes.Label(input.PetType)}, supplier: {refs.Supplier})")
+                        $"Added with {Fmt.Qty(input.Quantity, input.Unit)}{If(String.IsNullOrWhiteSpace(input.Description), "", " (" & input.Description.Trim() & ")")} at {Fmt.Money(input.RetailPrice)} ({refs.Category} · {PetTypes.Label(input.PetType)}, supplier: {refs.Supplier})")
                     tx.Commit()
                 End Using
             End Using
@@ -137,6 +198,8 @@ Public NotInheritable Class InventoryService
 
     ''' <summary>Saves descriptive changes. Returns False when nothing changed. Quantity is never changed here.</summary>
     Public Shared Function UpdateItem(input As Item) As Boolean
+        input.Unit = MeasurementUnits.Normalize(input.Unit)
+        input.PetType = PetTypes.Normalize(input.PetType)
         Dim errors = Validate(input)
         If errors.Count > 0 Then Throw New InputValidationException(errors)
 
@@ -148,6 +211,10 @@ Public NotInheritable Class InventoryService
                     If ItemRepository.NameExists(conn, tx, input.Name, input.Id) Then
                         Throw New InputValidationException("name", "Another item already uses this name.")
                     End If
+                    ' Matched against the other items only, so this item's own spelling can still be changed (e.g. "rabbit" → "Rabbit").
+                    If Not String.Equals(existing.PetType, input.PetType, StringComparison.OrdinalIgnoreCase) Then
+                        input.PetType = MatchExistingPetType(conn, tx, input.PetType)
+                    End If
                     Dim refs = LoadReferences(conn, tx, input)
 
                     Dim changes As New List(Of String)
@@ -155,6 +222,15 @@ Public NotInheritable Class InventoryService
                     If Not String.Equals(existing.Name, newName, StringComparison.Ordinal) Then changes.Add($"name ""{existing.Name}"" → ""{newName}""")
                     If existing.CategoryId <> input.CategoryId Then changes.Add($"category {existing.CategoryName} → {refs.Category}")
                     If existing.PetType <> input.PetType Then changes.Add($"pet type {PetTypes.Label(existing.PetType)} → {PetTypes.Label(input.PetType)}")
+                    If Not String.Equals(If(existing.Unit, ""), If(input.Unit, ""), StringComparison.Ordinal) Then
+                        ' Validate checked the form's copy of the quantity; recheck against the stored stock.
+                        Dim unitError = InputValidator.CheckWholeForUnit(existing.Quantity, input.Unit, "Quantity")
+                        If unitError IsNot Nothing Then
+                            input.Quantity = existing.Quantity
+                            Throw New InputValidationException(Validate(input))
+                        End If
+                        changes.Add($"unit {If(String.IsNullOrWhiteSpace(existing.Unit), "(none)", existing.Unit)} → {input.Unit} (quantity not converted)")
+                    End If
                     If existing.RetailPrice <> input.RetailPrice Then changes.Add($"retail price {Fmt.Money(existing.RetailPrice)} → {Fmt.Money(input.RetailPrice)}")
                     If existing.SupplierId <> input.SupplierId Then changes.Add($"supplier {existing.SupplierName} → {refs.Supplier}")
                     If Not Nullable.Equals(existing.ExpirationDate, input.ExpirationDate) Then

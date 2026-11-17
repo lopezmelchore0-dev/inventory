@@ -71,6 +71,7 @@ Class StockAdjustmentWindow
         End Select
         NoteLabel.Text = If(Reason = StockService.OtherReason, "Note * (describe the reason)", "Note (optional)")
 
+        UnitSuffix.Text = If(item?.UnitText, "")
         If item Is Nothing Then
             CurrentPanel.Visibility = Visibility.Collapsed
             PreviewPanel.Visibility = Visibility.Collapsed
@@ -85,10 +86,10 @@ Class StockAdjustmentWindow
         If InputValidator.TryParseAmount(AmountBox.Text, amount) AndAlso amount >= 0 Then
             Dim newQty = StockService.ComputeNewQuantity(item.Quantity, Mode, amount)
             If newQty < 0 Then
-                PreviewText.Text = $"Cannot deduct {Fmt.Qty(amount)} — only {item.QuantityText} available."
+                PreviewText.Text = $"Cannot deduct {Fmt.Qty(amount, item.Unit)} — only {item.QuantityText} available."
             Else
                 Dim newStatus = StatusCalculator.GetStockStatus(newQty, _settings.LowStockThreshold, _settings.CriticalStockThreshold)
-                PreviewText.Text = $"{Fmt.Qty(item.Quantity)} → {Fmt.Qty(newQty)}  ({Fmt.SignedQty(newQty - item.Quantity)})" &
+                PreviewText.Text = $"{Fmt.Qty(item.Quantity, item.Unit)} → {Fmt.Qty(newQty, item.Unit)}  ({Fmt.SignedQty(newQty - item.Quantity, item.Unit)})" &
                                    $"  ·  Status after: {StatusCalculator.StockLabel(newStatus)}"
             End If
             PreviewPanel.Visibility = Visibility.Visible
@@ -112,7 +113,7 @@ Class StockAdjustmentWindow
         ElseIf Not InputValidator.TryParseAmount(AmountBox.Text, amount) Then
             errors("amount") = "Enter a valid quantity using numbers only (e.g. 3 or 2.5)."
         End If
-        For Each kv In StockService.ValidateAdjustment(item.Quantity, Mode, amount, Reason, NoteBox.Text)
+        For Each kv In StockService.ValidateAdjustment(item.Quantity, Mode, amount, Reason, NoteBox.Text, item.Unit)
             If Not errors.ContainsKey(kv.Key) Then errors(kv.Key) = kv.Value
         Next
         If errors.Count > 0 Then
@@ -121,13 +122,13 @@ Class StockAdjustmentWindow
         End If
 
         Dim newQty = StockService.ComputeNewQuantity(item.Quantity, Mode, amount)
-        Dim message = $"""{item.Name}""{vbLf}{vbLf}Stock: {Fmt.Qty(item.Quantity)} → {Fmt.Qty(newQty)} ({Fmt.SignedQty(newQty - item.Quantity)}){vbLf}" &
+        Dim message = $"""{item.Name}""{vbLf}{vbLf}Stock: {Fmt.Qty(item.Quantity, item.Unit)} → {Fmt.Qty(newQty, item.Unit)} ({Fmt.SignedQty(newQty - item.Quantity, item.Unit)}){vbLf}" &
                       $"Reason: {Reason}" & If(String.IsNullOrWhiteSpace(NoteBox.Text), "", $"{vbLf}Note: {NoteBox.Text.Trim()}")
         If Not Dialogs.Confirm("Confirm stock adjustment", message, "Apply Adjustment") Then Return
 
         Try
             Dim result = StockService.Adjust(item.Id, Mode, amount, Reason, NoteBox.Text)
-            ResultMessage = $"Stock of ""{item.Name}"" adjusted to {Fmt.Qty(result)}."
+            ResultMessage = $"Stock of ""{item.Name}"" adjusted to {Fmt.Qty(result, item.Unit)}."
             DialogResult = True
         Catch ex As InputValidationException
             _errors.Show(ex.Errors)

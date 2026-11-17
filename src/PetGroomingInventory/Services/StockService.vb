@@ -25,18 +25,22 @@ Public NotInheritable Class StockService
         End Select
     End Function
 
-    ''' <summary>Validates an adjustment against the current quantity. Keys: amount, reason, note.</summary>
+    ''' <summary>
+    ''' Validates an adjustment against the current quantity. <paramref name="unit"/> is the item's unit: amounts are
+    ''' always in that unit (never converted), and counted units take whole numbers only. Keys: amount, reason, note.
+    ''' </summary>
     Public Shared Function ValidateAdjustment(current As Decimal, mode As AdjustmentMode, amount As Decimal,
-                                              reason As String, note As String) As Dictionary(Of String, String)
+                                              reason As String, note As String, Optional unit As String = Nothing) As Dictionary(Of String, String)
         Dim errors As New Dictionary(Of String, String)
-        Dim amountError = InputValidator.CheckAmount(amount, If(mode = AdjustmentMode.SetCount, "Counted quantity", "Quantity"),
-                                                     allowZero:=(mode = AdjustmentMode.SetCount))
+        Dim label = If(mode = AdjustmentMode.SetCount, "Counted quantity", "Quantity")
+        Dim amountError = If(InputValidator.CheckAmount(amount, label, allowZero:=(mode = AdjustmentMode.SetCount)),
+                             InputValidator.CheckWholeForUnit(amount, unit, label))
         If amountError IsNot Nothing Then
             errors("amount") = amountError
         Else
             Dim newQty = ComputeNewQuantity(current, mode, amount)
             If newQty < 0 Then
-                errors("amount") = $"You can deduct at most {Fmt.Qty(current)} (the available stock)."
+                errors("amount") = $"You can deduct at most {Fmt.Qty(current, unit)} (the available stock)."
             ElseIf newQty = current Then
                 errors("amount") = "This adjustment does not change the stock."
             ElseIf newQty > InputValidator.MaxAmount Then
@@ -70,6 +74,8 @@ Public NotInheritable Class StockService
                 Dim item = ItemRepository.GetById(conn, tx, itemId)
                 Dim current = ItemRepository.LockQuantity(conn, tx, itemId)
                 If item Is Nothing OrElse Not current.HasValue Then Throw New InputValidationException("item", "This item no longer exists.")
+                Dim wholeError = InputValidator.CheckWholeForUnit(quantity, item.Unit, "Quantity received")
+                If wholeError IsNot Nothing Then Throw New InputValidationException("quantity", wholeError)
 
                 Dim supplierName As String = Nothing
                 If supplierId.HasValue Then
@@ -91,15 +97,16 @@ Public NotInheritable Class StockService
                     .QtyChange = quantity,
                     .QtyBefore = current.Value,
                     .QtyAfter = newQty,
+                    .Unit = item.Unit,
                     .SupplierId = supplierId,
                     .SupplierName = supplierName,
                     .TxnDate = receivedDate.Date,
                     .Note = note
                 })
 
-                Dim description = $"Received {Fmt.Qty(quantity)}"
+                Dim description = $"Received {Fmt.Qty(quantity, item.Unit)}"
                 If supplierName IsNot Nothing Then description &= $" from {supplierName}"
-                description &= $" ({Fmt.Qty(current.Value)} → {Fmt.Qty(newQty)})"
+                description &= $" ({Fmt.Qty(current.Value)} → {Fmt.Qty(newQty, item.Unit)})"
                 If receivedDate.Date <> Date.Today Then description &= $", dated {Fmt.DateText(receivedDate)}"
                 If Not String.IsNullOrWhiteSpace(note) Then description &= $". Note: {note.Trim()}"
                 ActivityRepository.Log(conn, tx, item.Name, ActivityTypes.StockReceived, description)
@@ -120,7 +127,7 @@ Public NotInheritable Class StockService
                 Dim current = ItemRepository.LockQuantity(conn, tx, itemId)
                 If item Is Nothing OrElse Not current.HasValue Then Throw New InputValidationException("item", "This item no longer exists.")
 
-                Dim errors = ValidateAdjustment(current.Value, mode, amount, reason, note)
+                Dim errors = ValidateAdjustment(current.Value, mode, amount, reason, note, item.Unit)
                 If errors.Count > 0 Then Throw New InputValidationException(errors)
 
                 newQty = ComputeNewQuantity(current.Value, mode, amount)
@@ -133,13 +140,14 @@ Public NotInheritable Class StockService
                     .QtyChange = change,
                     .QtyBefore = current.Value,
                     .QtyAfter = newQty,
+                    .Unit = item.Unit,
                     .TxnDate = Date.Today,
                     .Reason = reason,
                     .Note = note
                 })
 
                 Dim verb = If(change > 0, "Added", "Deducted")
-                Dim description = $"{verb} {Fmt.Qty(Math.Abs(change))} — {reason} ({Fmt.Qty(current.Value)} → {Fmt.Qty(newQty)})"
+                Dim description = $"{verb} {Fmt.Qty(Math.Abs(change), item.Unit)} — {reason} ({Fmt.Qty(current.Value)} → {Fmt.Qty(newQty, item.Unit)})"
                 If Not String.IsNullOrWhiteSpace(note) Then description &= $". Note: {note.Trim()}"
                 ActivityRepository.Log(conn, tx, item.Name, ActivityTypes.StockAdjusted, description)
                 tx.Commit()

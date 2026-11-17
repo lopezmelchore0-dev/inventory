@@ -35,14 +35,18 @@ CREATE TABLE IF NOT EXISTS suppliers (
     UNIQUE KEY uq_suppliers_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- pet_type is 'Dog', 'Cat', 'Both' or a custom pet type the user typed (e.g. 'Rabbit').
+-- unit is the unit of measure the quantity is counted in ('pcs', 'ml', ... or a custom unit).
+-- It is NULL for items added before units were introduced.
 -- unit_id is legacy: the free-text description now holds size / flavor / variant.
 -- The column and the units table stay so older data and backups remain valid.
 CREATE TABLE IF NOT EXISTS items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
     category_id INT NOT NULL,
-    pet_type VARCHAR(4) NOT NULL DEFAULT 'Both',
+    pet_type VARCHAR(40) NOT NULL DEFAULT 'Both',
     quantity DECIMAL(12,2) NOT NULL DEFAULT 0,
+    unit VARCHAR(40) NULL,
     unit_id INT NULL,
     retail_price DECIMAL(12,2) NOT NULL DEFAULT 0,
     supplier_id INT NOT NULL,
@@ -54,14 +58,13 @@ CREATE TABLE IF NOT EXISTS items (
     UNIQUE KEY uq_items_name (name),
     CONSTRAINT chk_items_quantity CHECK (quantity >= 0),
     CONSTRAINT chk_items_price CHECK (retail_price >= 0),
-    CONSTRAINT chk_items_pet_type CHECK (pet_type IN ('Dog', 'Cat', 'Both')),
     CONSTRAINT fk_items_category FOREIGN KEY (category_id) REFERENCES categories (id),
     CONSTRAINT fk_items_unit FOREIGN KEY (unit_id) REFERENCES units (id),
     CONSTRAINT fk_items_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Every quantity change (opening stock, stock-in, adjustment).
--- Item and supplier names are copied so history survives deletions.
+-- Item name, unit and supplier name are copied so history survives deletions.
 CREATE TABLE IF NOT EXISTS stock_transactions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     item_id INT NULL,
@@ -70,6 +73,7 @@ CREATE TABLE IF NOT EXISTS stock_transactions (
     qty_change DECIMAL(12,2) NOT NULL,
     qty_before DECIMAL(12,2) NOT NULL,
     qty_after DECIMAL(12,2) NOT NULL,
+    unit VARCHAR(40) NULL,
     supplier_id INT NULL,
     supplier_name VARCHAR(120) NULL,
     txn_date DATE NOT NULL,

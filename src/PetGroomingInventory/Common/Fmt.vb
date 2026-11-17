@@ -18,6 +18,40 @@ Public NotInheritable Class Fmt
         Return "0"
     End Function
 
+    ''' <summary>"12 pcs", "1 box". Items without a unit (added before units existed) show the number only.</summary>
+    Public Shared Function Qty(value As Decimal, unit As String) As String
+        Return WithUnit(Qty(value), value, unit)
+    End Function
+
+    Public Shared Function SignedQty(value As Decimal, unit As String) As String
+        Return WithUnit(SignedQty(value), value, unit)
+    End Function
+
+    Private Shared Function WithUnit(number As String, value As Decimal, unit As String) As String
+        Dim word = MeasurementUnits.Display(unit, value)
+        Return If(word.Length = 0, number, number & " " & word)
+    End Function
+
+    ''' <summary>
+    ''' Total per unit, since quantities in different units cannot be added: "120 pcs · 3,500 ml · 4 (no unit)".
+    ''' A single unit gives a single total, e.g. "15 pcs" (or "15" when no item has a unit).
+    ''' </summary>
+    Public Shared Function QtyByUnit(entries As IEnumerable(Of (Qty As Decimal, Unit As String)), Optional signed As Boolean = False) As String
+        Dim groups = entries.GroupBy(Function(e) If(e.Unit, "").Trim(), StringComparer.Ordinal).
+                             OrderBy(Function(g) g.Key.Length = 0).ThenBy(Function(g) g.Key, StringComparer.OrdinalIgnoreCase).ToList()
+        If groups.Count = 0 Then Return If(signed, SignedQty(0D), Qty(0D))
+        Dim parts = groups.Select(
+            Function(g)
+                Dim total = g.Sum(Function(e) e.Qty)
+                If g.Key.Length = 0 Then
+                    Dim number = If(signed, SignedQty(total), Qty(total))
+                    Return If(groups.Count = 1, number, number & " (no unit)")
+                End If
+                Return If(signed, SignedQty(total, g.Key), Qty(total, g.Key))
+            End Function)
+        Return String.Join(" · ", parts)
+    End Function
+
     Public Shared Function Money(value As Decimal) As String
         Return Peso & value.ToString("#,##0.00", Invariant)
     End Function

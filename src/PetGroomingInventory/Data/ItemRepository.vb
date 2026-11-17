@@ -5,7 +5,7 @@ Public NotInheritable Class ItemRepository
     End Sub
 
     Private Const SelectSql As String =
-        "SELECT i.id, i.name, i.category_id, c.name AS category_name, i.pet_type, i.quantity, " &
+        "SELECT i.id, i.name, i.category_id, c.name AS category_name, i.pet_type, i.quantity, i.unit, " &
         "i.retail_price, i.supplier_id, s.name AS supplier_name, i.expiration_date, i.description, i.is_sample, i.created_at " &
         "FROM items i " &
         "JOIN categories c ON c.id = i.category_id " &
@@ -28,6 +28,20 @@ Public NotInheritable Class ItemRepository
             Function(r) Db.GetString(r, "description"), Db.P("@max", maxLength))
     End Function
 
+    ''' <summary>Units already used by items, offered as suggestions so a custom unit is typed only once.</summary>
+    Public Shared Function GetDistinctUnits(conn As MySqlConnection) As List(Of String)
+        Return Db.Query(Of String)(conn, Nothing,
+            "SELECT DISTINCT TRIM(unit) AS unit FROM items WHERE unit IS NOT NULL AND TRIM(unit) <> '' ORDER BY unit",
+            Function(r) Db.GetString(r, "unit"))
+    End Function
+
+    ''' <summary>Pet types already used by items (built-in and custom), so a custom pet type is typed only once.</summary>
+    Public Shared Function GetDistinctPetTypes(conn As MySqlConnection, tx As MySqlTransaction) As List(Of String)
+        Return Db.Query(Of String)(conn, tx,
+            "SELECT DISTINCT TRIM(pet_type) AS pet_type FROM items WHERE TRIM(pet_type) <> '' ORDER BY pet_type",
+            Function(r) Db.GetString(r, "pet_type"))
+    End Function
+
     ''' <summary>Reads the quantity with a row lock so concurrent stock changes cannot interleave.</summary>
     Public Shared Function LockQuantity(conn As MySqlConnection, tx As MySqlTransaction, id As Integer) As Decimal?
         Dim value = Db.Scalar(conn, tx, "SELECT quantity FROM items WHERE id = @id FOR UPDATE", Db.P("@id", id))
@@ -42,12 +56,13 @@ Public NotInheritable Class ItemRepository
 
     Public Shared Function Insert(conn As MySqlConnection, tx As MySqlTransaction, item As Item) As Integer
         Return Db.Insert(conn, tx,
-            "INSERT INTO items (name, category_id, pet_type, quantity, retail_price, supplier_id, expiration_date, description, is_sample) " &
-            "VALUES (@name, @category, @petType, @quantity, @price, @supplier, @expiration, @description, @sample)",
+            "INSERT INTO items (name, category_id, pet_type, quantity, unit, retail_price, supplier_id, expiration_date, description, is_sample) " &
+            "VALUES (@name, @category, @petType, @quantity, @unit, @price, @supplier, @expiration, @description, @sample)",
             Db.P("@name", item.Name.Trim()),
             Db.P("@category", item.CategoryId),
             Db.P("@petType", item.PetType),
             Db.P("@quantity", item.Quantity),
+            Db.P("@unit", Db.NullIfBlank(item.Unit)),
             Db.P("@price", item.RetailPrice),
             Db.P("@supplier", item.SupplierId),
             Db.P("@expiration", item.ExpirationDate),
@@ -58,11 +73,12 @@ Public NotInheritable Class ItemRepository
     ''' <summary>Updates descriptive fields only. Quantity changes go through stock-in / adjustment.</summary>
     Public Shared Sub UpdateDetails(conn As MySqlConnection, tx As MySqlTransaction, item As Item)
         Db.Execute(conn, tx,
-            "UPDATE items SET name = @name, category_id = @category, pet_type = @petType, retail_price = @price, " &
+            "UPDATE items SET name = @name, category_id = @category, pet_type = @petType, unit = @unit, retail_price = @price, " &
             "supplier_id = @supplier, expiration_date = @expiration, description = @description WHERE id = @id",
             Db.P("@name", item.Name.Trim()),
             Db.P("@category", item.CategoryId),
             Db.P("@petType", item.PetType),
+            Db.P("@unit", Db.NullIfBlank(item.Unit)),
             Db.P("@price", item.RetailPrice),
             Db.P("@supplier", item.SupplierId),
             Db.P("@expiration", item.ExpirationDate),
@@ -86,6 +102,7 @@ Public NotInheritable Class ItemRepository
             .CategoryName = Db.GetString(r, "category_name"),
             .PetType = Db.GetString(r, "pet_type"),
             .Quantity = Db.GetDecimal(r, "quantity"),
+            .Unit = Db.GetString(r, "unit"),
             .RetailPrice = Db.GetDecimal(r, "retail_price"),
             .SupplierId = Db.GetInt(r, "supplier_id"),
             .SupplierName = Db.GetString(r, "supplier_name"),

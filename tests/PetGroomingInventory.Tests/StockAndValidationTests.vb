@@ -38,14 +38,14 @@ Public Class StockAndValidationTests
     <Fact>
     Public Sub ItemValidation_RequiresFields_AndRejectsNegatives()
         Dim errors = InventoryService.Validate(New Item With {.Name = "  ", .Quantity = -1D, .RetailPrice = -5D})
-        For Each key In {"name", "category", "pettype", "supplier", "quantity", "price"}
+        For Each key In {"name", "category", "pettype", "supplier", "quantity", "unit", "price"}
             Assert.True(errors.ContainsKey(key), $"Expected an error for {key}")
         Next
     End Sub
 
     <Fact>
     Public Sub ItemValidation_ExpirationDateIsOptional()
-        Dim item As New Item With {.Name = "Slicker Brush", .CategoryId = 1, .PetType = PetTypes.Both, .SupplierId = 1, .Quantity = 3D, .RetailPrice = 180D}
+        Dim item As New Item With {.Name = "Slicker Brush", .CategoryId = 1, .PetType = PetTypes.Both, .SupplierId = 1, .Quantity = 3D, .Unit = "pcs", .RetailPrice = 180D}
         Assert.Empty(InventoryService.Validate(item))
     End Sub
 
@@ -53,17 +53,22 @@ Public Class StockAndValidationTests
     <InlineData("Dog", True)>
     <InlineData("Cat", True)>
     <InlineData("Both", True)>
+    <InlineData("Bird", True)>
+    <InlineData("Rabbit", True)>
+    <InlineData("Guinea Pig", True)>
+    <InlineData("1234567890123456789012345678901234567890", True)>    ' 40 characters
     <InlineData("", False)>
-    <InlineData("Bird", False)>
-    <InlineData("dog", False)>
-    Public Sub ItemValidation_PetTypeMustBeDogCatOrBoth(petType As String, valid As Boolean)
-        Dim item As New Item With {.Name = "Slicker Brush", .CategoryId = 1, .PetType = petType, .SupplierId = 1, .Quantity = 3D, .RetailPrice = 180D}
+    <InlineData("   ", False)>
+    <InlineData(Nothing, False)>
+    <InlineData("12345678901234567890123456789012345678901", False)>   ' 41 characters
+    Public Sub ItemValidation_PetTypeAcceptsCustomTypes(petType As String, valid As Boolean)
+        Dim item As New Item With {.Name = "Slicker Brush", .CategoryId = 1, .PetType = petType, .SupplierId = 1, .Quantity = 3D, .Unit = "pcs", .RetailPrice = 180D}
         Assert.Equal(Not valid, InventoryService.Validate(item).ContainsKey("pettype"))
     End Sub
 
     <Fact>
     Public Sub ItemValidation_DescriptionIsOptionalButLimited()
-        Dim item As New Item With {.Name = "Slicker Brush", .CategoryId = 1, .PetType = PetTypes.Dog, .SupplierId = 1, .Quantity = 3D, .RetailPrice = 180D,
+        Dim item As New Item With {.Name = "Slicker Brush", .CategoryId = 1, .PetType = PetTypes.Dog, .SupplierId = 1, .Quantity = 3D, .Unit = "pcs", .RetailPrice = 180D,
                                    .Description = New String("x"c, InventoryService.MaxDescriptionLength + 1)}
         Assert.True(InventoryService.Validate(item).ContainsKey("description"))
         item.Description = "Gentle on sensitive skin"
@@ -77,7 +82,7 @@ Public Class StockAndValidationTests
     <InlineData("Stuffed Beef Cubes 500 g")>
     <InlineData("Anything the shop wants to write: 2 × 250 g / Lamb & Rice!")>
     Public Sub ItemValidation_DescriptionAcceptsAnyText(description As String)
-        Dim item As New Item With {.Name = "Slicker Brush", .CategoryId = 1, .PetType = PetTypes.Dog, .SupplierId = 1, .Quantity = 3D, .RetailPrice = 180D,
+        Dim item As New Item With {.Name = "Slicker Brush", .CategoryId = 1, .PetType = PetTypes.Dog, .SupplierId = 1, .Quantity = 3D, .Unit = "pcs", .RetailPrice = 180D,
                                    .Description = description}
         Assert.Empty(InventoryService.Validate(item))
     End Sub

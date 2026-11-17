@@ -56,12 +56,14 @@
             </StackPanel>
             <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,14">
                 <TextBlock Text="Pet Type *" Style="{StaticResource LabelText}"/>
-                <ComboBox x:Name="PetTypeBox" Tag="Dog, Cat or Both?" DisplayMemberPath="Label" SelectedValuePath="Value"
-                          ToolTip="Which animal this item is intended for"/>
+                <!-- Pet type: pick Dog, Cat, Both or a pet type already in use, or type a new one -->
+                <ComboBox x:Name="PetTypeBox" Style="{StaticResource EditableComboBox}" Tag="e.g. Dog, Cat, Rabbit"
+                          ToolTip="Which animal this item is intended for. Pick a pet type, or type your own (e.g. Rabbit, Bird)."
+                          SelectionChanged="PetTypeBox_SelectionChanged"/>
                 <TextBlock x:Name="PetTypeError" Style="{StaticResource ErrorText}"/>
             </StackPanel>
 
-            <!-- 4. Description (size, flavor, color or variant: pick a suggestion or type anything) / 5. Quantity -->
+            <!-- 4. Description (size, flavor, color or variant: pick a suggestion or type anything) / 5. Quantity and unit -->
             <StackPanel Grid.Row="2" Margin="0,0,0,14">
                 <TextBlock Text="Description (optional)" Style="{StaticResource LabelText}"/>
                 <ComboBox x:Name="DescriptionBox" Style="{StaticResource EditableComboBox}" Tag="e.g. 500 ml, 15 g Pink, Lamb"
@@ -69,12 +71,24 @@
                 <TextBlock x:Name="DescriptionError" Style="{StaticResource ErrorText}"/>
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="2" Margin="0,0,0,14">
-                <TextBlock x:Name="QuantityLabel" Text="Quantity *" Style="{StaticResource LabelText}"/>
-                <TextBox x:Name="QuantityBox" Tag="0" MaxLength="12"
-                         PreviewTextInput="Amount_PreviewTextInput" DataObject.Pasting="Amount_Pasting"/>
+                <TextBlock x:Name="QuantityLabel" Text="Quantity &amp; Unit *" Style="{StaticResource LabelText}"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="QuantityBox" Tag="0" MaxLength="12"
+                             PreviewTextInput="Amount_PreviewTextInput" DataObject.Pasting="Amount_Pasting"/>
+                    <!-- Unit: pick a predefined unit, search by typing, or type a custom one -->
+                    <ComboBox x:Name="UnitBox" Grid.Column="1" Width="158" Margin="8,0,0,0" Style="{StaticResource EditableComboBox}"
+                              Tag="Unit" ToolTip="How this item is counted, e.g. Pieces (pcs), Milliliters (ml). Type to search, or type your own unit."
+                              SelectionChanged="UnitBox_SelectionChanged"/>
+                </Grid>
                 <TextBlock x:Name="QuantityError" Style="{StaticResource ErrorText}"/>
-                <TextBlock x:Name="QuantityHint" Style="{StaticResource MutedText}" FontSize="11.5" Margin="2,5,0,0" Visibility="Collapsed"
-                           Text="To change the quantity, use Stock In or Stock Adjustment so the change is recorded."/>
+                <TextBlock x:Name="UnitError" Style="{StaticResource ErrorText}"/>
+                <TextBlock x:Name="UnitHint" Style="{StaticResource MutedText}" FontSize="11.5" Margin="2,5,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
+                <TextBlock x:Name="QuantityHint" Style="{StaticResource MutedText}" FontSize="11.5" Margin="2,5,0,0" TextWrapping="Wrap" Visibility="Collapsed"
+                           Text="To change the quantity, use Stock In or Stock Adjustment so the change is recorded. Changing the unit does not convert the quantity."/>
             </StackPanel>
 
             <!-- 6. Retail price / 8. Expiration date -->

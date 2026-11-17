@@ -34,7 +34,10 @@ Class DashboardView
 
         ' Summary cards
         TotalItemsValue.Text = s.TotalItems.ToString("N0", CultureInfo.InvariantCulture)
-        AvailableStockValue.Text = Fmt.Qty(s.AvailableStock)
+        ' Quantities in different units cannot be added, so stock on hand is totalled per unit.
+        AvailableStockValue.Text = s.StockByUnit
+        AvailableStockValue.ToolTip = s.StockByUnit.Replace(" · ", Environment.NewLine)
+        AvailableStockValue.FontSize = If(s.StockByUnit.Length > 12, 17, 26)
         LowStockValue.Text = s.LowStock.ToString(CultureInfo.InvariantCulture)
         CriticalStockValue.Text = s.CriticalStock.ToString(CultureInfo.InvariantCulture)
         OutOfStockValue.Text = s.OutOfStock.ToString(CultureInfo.InvariantCulture)

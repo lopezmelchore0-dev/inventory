@@ -105,7 +105,7 @@
                             <StackPanel Margin="14,0,0,0">
                                 <TextBlock x:Name="AvailableStockValue" Text="0" FontSize="26" FontWeight="Bold" Margin="0,-4,0,0" TextTrimming="CharacterEllipsis"/>
                                 <TextBlock Text="Available Stock" FontSize="13" FontWeight="SemiBold"/>
-                                <TextBlock Text="Total quantity on hand" Style="{StaticResource MutedText}" FontSize="11.5" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                                <TextBlock Text="Total quantity on hand, by unit" Style="{StaticResource MutedText}" FontSize="11.5" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
                             </StackPanel>
                         </DockPanel>
                     </Button>

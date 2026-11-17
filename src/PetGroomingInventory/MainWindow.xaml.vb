@@ -13,6 +13,7 @@ Public Enum PageKey
     Profile
     ChangePassword
     AddAdmin
+    Help
 End Enum
 
 Public Enum ToastKind
@@ -219,6 +220,7 @@ Class MainWindow
             Case PageKey.Profile : Return New ProfileView()
             Case PageKey.ChangePassword : Return New ChangePasswordView()
             Case PageKey.AddAdmin : Return New PageBase With {.Content = New RegisterView(addedByAdmin:=True)}
+            Case PageKey.Help : Return New HelpView()
             Case Else : Return New DashboardView()
         End Select
     End Function
@@ -234,6 +236,7 @@ Class MainWindow
             Case PageKey.Profile : Return ("Admin Profile", "Your account details, security question and password.")
             Case PageKey.ChangePassword : Return ("Change Password", "Keep your account secure with a strong password.")
             Case PageKey.AddAdmin : Return ("Add Admin", "Create another Admin account for this shop.")
+            Case PageKey.Help : Return ("Help & Support", "Quick answers and step-by-step guides for using PawStock.")
             Case Else : Return ("Dashboard", "Welcome back! Here's your shop's inventory at a glance.")
         End Select
     End Function
@@ -262,17 +265,9 @@ Class MainWindow
         NavigateTo(PageKey.Profile)
     End Sub
 
+    ''' <summary>Always lands on the Help &amp; Support preview, even if the guide was left open.</summary>
     Private Sub Help_Click(sender As Object, e As RoutedEventArgs)
-        Dialogs.ShowInfo("Help & Support",
-            "• Inventory → Add Item to register a product. Expiration date is optional." & vbLf &
-            "• Record deliveries with Stock In. Fix count differences with Stock Adjustment (a reason is required)." & vbLf &
-            "• Stock status: Green = In Stock, Yellow = Low Stock, Red = Critical Stock, Gray = Out of Stock. Thresholds are set in Settings." & vbLf &
-            "• Stock Monitoring lists items that need restocking and items that are expired or expiring soon." & vbLf &
-            "• Reports: pick a report type, Inventory From and Inventory To, then Generate Report. Print it or export it to PDF or Excel." & vbLf &
-            "• Back up your data regularly in Settings → Backup & Restore." & vbLf &
-            "• My Profile: update your details and security question, change your password or add another Admin." & vbLf &
-            "• Forgot your password? Use ""Forgot Password?"" on the Login screen and answer your security question." & vbLf &
-            "• If the app can't connect, start MySQL in the XAMPP Control Panel.")
+        TryCast(NavigateTo(PageKey.Help), HelpView)?.ShowPreview()
     End Sub
 
     ' ===================== Shell state =====================

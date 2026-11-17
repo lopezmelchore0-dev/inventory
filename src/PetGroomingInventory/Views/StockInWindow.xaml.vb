@@ -46,6 +46,7 @@
 
     Private Sub ItemBox_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
         Dim item = SelectedItem
+        UnitSuffix.Text = If(item?.UnitText, "")
         If item Is Nothing Then
             CurrentPanel.Visibility = Visibility.Collapsed
         Else
@@ -66,7 +67,7 @@
         Dim item = SelectedItem
         Dim qty As Decimal
         If item IsNot Nothing AndAlso InputValidator.TryParseAmount(QuantityBox.Text, qty) AndAlso qty > 0 Then
-            PreviewText.Text = $"New stock after receiving: {Fmt.Qty(item.Quantity + qty)}  (was {Fmt.Qty(item.Quantity)})"
+            PreviewText.Text = $"New stock after receiving: {Fmt.Qty(item.Quantity + qty, item.Unit)}  (was {Fmt.Qty(item.Quantity, item.Unit)})"
             PreviewPanel.Visibility = Visibility.Visible
         Else
             PreviewPanel.Visibility = Visibility.Collapsed
@@ -85,7 +86,8 @@
         ElseIf Not InputValidator.TryParseAmount(QuantityBox.Text, qty) Then
             errors("quantity") = "Enter a valid quantity using numbers only (e.g. 24 or 2.5)."
         Else
-            Dim amountError = InputValidator.CheckAmount(qty, "Quantity received", allowZero:=False)
+            Dim amountError = If(InputValidator.CheckAmount(qty, "Quantity received", allowZero:=False),
+                                 InputValidator.CheckWholeForUnit(qty, item?.Unit, "Quantity received"))
             If amountError IsNot Nothing Then errors("quantity") = amountError
         End If
 
@@ -99,7 +101,7 @@
         Dim supplierId = CInt(If(SupplierBox.SelectedValue, 0))
         Try
             StockService.StockIn(item.Id, qty, ReceivedDatePicker.SelectedDate.Value, If(supplierId > 0, supplierId, CType(Nothing, Integer?)), NoteBox.Text)
-            ResultMessage = $"Received {Fmt.Qty(qty)} of ""{item.Name}"". New stock: {Fmt.Qty(item.Quantity + qty)}."
+            ResultMessage = $"Received {Fmt.Qty(qty, item.Unit)} of ""{item.Name}"". New stock: {Fmt.Qty(item.Quantity + qty, item.Unit)}."
             DialogResult = True
         Catch ex As InputValidationException
             _errors.Show(ex.Errors)

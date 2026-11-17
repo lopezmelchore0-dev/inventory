@@ -81,10 +81,11 @@ Public Class UiSmokeTests
         Assert.Equal(Visibility.Visible, shell.ShellRoot.Visibility)
         Assert.Equal(Visibility.Collapsed, shell.AuthPanel.Visibility)
         Assert.Equal("Maria Santos", shell.AccountNameText.Text)
-        For Each key In {PageKey.Profile, PageKey.ChangePassword, PageKey.AddAdmin, PageKey.Settings, PageKey.Reports}
+        For Each key In {PageKey.Profile, PageKey.ChangePassword, PageKey.AddAdmin, PageKey.Settings, PageKey.Reports, PageKey.Help}
             Assert.NotNull(shell.NavigateTo(key))
             Layout(shell)
         Next
+        CheckHelp(DirectCast(shell.PageHost.Content, HelpView))
 
         Dim loadData = GetType(PageBase).GetMethod("LoadData", BindingFlags.NonPublic Or BindingFlags.Instance)
         Dim pages As PageBase() = {New DashboardView(), New InventoryView(), New StockMonitoringView(),
@@ -128,6 +129,24 @@ Public Class UiSmokeTests
         Assert.IsType(Of LoginView)(shell.AuthPanel.Content)
         Assert.Null(shell.NavigateTo(PageKey.Inventory))
         Assert.Null(shell.PageHost.Content)
+    End Sub
+
+    ''' <summary>Help &amp; Support opens on the preview, switches to the full guide (at a topic) and back.</summary>
+    Private Shared Sub CheckHelp(view As HelpView)
+        Assert.Equal(Visibility.Visible, view.PreviewPanel.Visibility)
+        Assert.False(view.IsGuideOpen)
+        Assert.Equal(HelpContent.Topics.Count, view.TopicList.Items.Count)
+
+        view.ShowGuide(HelpContent.Topics(4))
+        Layout(view)
+        Assert.True(view.IsGuideOpen)
+        Assert.Equal(Visibility.Collapsed, view.PreviewPanel.Visibility)
+        Assert.Equal(HelpContent.Topics.Count, view.GuideSections.Items.Count)
+
+        view.ShowPreview()
+        Layout(view)
+        Assert.False(view.IsGuideOpen)
+        Assert.Equal(Visibility.Visible, view.PreviewPanel.Visibility)
     End Sub
 
     ''' <summary>Every report type runs against the sample data, and a generated report renders on the Reports page.</summary>

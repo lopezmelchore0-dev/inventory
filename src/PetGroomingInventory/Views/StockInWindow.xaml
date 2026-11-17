@@ -60,7 +60,16 @@
 
             <StackPanel Grid.Row="2" Margin="0,0,0,14">
                 <TextBlock Text="Quantity Received *" Style="{StaticResource LabelText}"/>
-                <TextBox x:Name="QuantityBox" Tag="e.g. 24" MaxLength="12" TextChanged="QuantityBox_TextChanged"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="QuantityBox" Tag="e.g. 24" MaxLength="12" TextChanged="QuantityBox_TextChanged"/>
+                    <!-- The selected item's unit: quantities are always entered in it -->
+                    <TextBlock x:Name="UnitSuffix" Grid.Column="1" Margin="10,0,2,0" MaxWidth="120" VerticalAlignment="Center"
+                               FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
+                </Grid>
                 <TextBlock x:Name="QuantityError" Style="{StaticResource ErrorText}"/>
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="2" Margin="0,0,0,14">

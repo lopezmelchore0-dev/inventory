@@ -48,4 +48,12 @@ Public NotInheritable Class InputValidator
         If Not HasAtMostTwoDecimals(value) Then Return $"{label} can have at most 2 decimal places."
         Return Nothing
     End Function
+
+    ''' <summary>Counted units (pcs, box, tablets…) take whole numbers only. Returns an error message, or Nothing.</summary>
+    Public Shared Function CheckWholeForUnit(value As Decimal, unit As String, label As String) As String
+        If MeasurementUnits.IsCountable(unit) AndAlso Decimal.Truncate(value) <> value Then
+            Return $"{label} must be a whole number for {MeasurementUnits.Display(unit, 2D)} (e.g. 3, not 2.5)."
+        End If
+        Return Nothing
+    End Function
 End Class

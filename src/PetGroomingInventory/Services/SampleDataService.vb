@@ -13,6 +13,7 @@ Public NotInheritable Class SampleDataService
         Public Category As String
         Public PetType As String = PetTypes.Both
         Public Description As String
+        Public Unit As String = "pcs"
         Public Price As Decimal
         Public Supplier As Integer
         Public Quantity As Func(Of AppSettings, Decimal)
@@ -54,11 +55,11 @@ Public NotInheritable Class SampleDataService
                                  .Quantity = Function(s) s.LowStockThreshold + 3, .ExpiresInDays = 180},
             New SampleItem With {.Name = "Pet Cologne Baby Powder 250ml", .Category = "Grooming Supplies", .Description = "250 ml", .Price = 175D, .Supplier = 0,
                                  .Quantity = Function(s) s.LowStockThreshold + 8, .ExpiresInDays = 520},
-            New SampleItem With {.Name = "Cotton Balls 100pcs", .Category = "Grooming Supplies", .Description = "100 pieces", .Price = 45D, .Supplier = 2,
+            New SampleItem With {.Name = "Cotton Balls 100pcs", .Category = "Grooming Supplies", .Description = "100 pieces", .Unit = "pack", .Price = 45D, .Supplier = 2,
                                  .Quantity = Function(s) s.LowStockThreshold + 30, .ExpiresInDays = Nothing},
-            New SampleItem With {.Name = "Pet Wet Wipes 80 sheets", .Category = "Grooming Supplies", .Description = "80 sheets", .Price = 95D, .Supplier = 0,
+            New SampleItem With {.Name = "Pet Wet Wipes 80 sheets", .Category = "Grooming Supplies", .Description = "80 sheets", .Unit = "pack", .Price = 95D, .Supplier = 0,
                                  .Quantity = Function(s) s.LowStockThreshold + 6, .ExpiresInDays = 25},
-            New SampleItem With {.Name = "Chicken Jerky Dog Treats", .Category = "Pet Food & Treats", .PetType = PetTypes.Dog, .Description = "Chicken", .Price = 120D, .Supplier = 1,
+            New SampleItem With {.Name = "Chicken Jerky Dog Treats", .Category = "Pet Food & Treats", .PetType = PetTypes.Dog, .Description = "Chicken", .Unit = "box", .Price = 120D, .Supplier = 1,
                                  .Quantity = Function(s) s.LowStockThreshold + 20, .ExpiresInDays = 75},
             New SampleItem With {.Name = "Kennel Disinfectant Spray 1L", .Category = "Cleaning Supplies", .Description = "1 L", .Price = 195D, .Supplier = 2,
                                  .Quantity = Function(s) Math.Max(1, s.CriticalStockThreshold - 1), .ExpiresInDays = 300},
@@ -95,6 +96,7 @@ Public NotInheritable Class SampleDataService
                         .PetType = sample.PetType,
                         .Description = sample.Description,
                         .Quantity = sample.Quantity(settings),
+                        .Unit = sample.Unit,
                         .RetailPrice = sample.Price,
                         .SupplierId = supplierIds(sample.Supplier),
                         .ExpirationDate = If(sample.ExpiresInDays.HasValue, Date.Today.AddDays(sample.ExpiresInDays.Value), CType(Nothing, Date?)),
@@ -104,7 +106,7 @@ Public NotInheritable Class SampleDataService
                     If item.Quantity > 0 Then
                         StockRepository.Insert(conn, tx, New StockTransaction With {
                             .ItemId = id, .ItemName = item.Name, .TxnType = TxnTypes.Initial,
-                            .QtyChange = item.Quantity, .QtyBefore = 0D, .QtyAfter = item.Quantity,
+                            .QtyChange = item.Quantity, .QtyBefore = 0D, .QtyAfter = item.Quantity, .Unit = item.Unit,
                             .SupplierId = item.SupplierId, .SupplierName = suppliers(sample.Supplier).Name,
                             .TxnDate = Date.Today, .Note = "Sample data opening stock"
                         })

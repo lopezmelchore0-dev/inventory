@@ -46,9 +46,15 @@ Public NotInheritable Class DatabaseInitializer
     ''' </summary>
     Private Shared Sub UpgradeItemColumns(conn As MySqlConnection)
         If Not ColumnExists(conn, "items", "pet_type") Then
-            Db.Execute(conn, Nothing,
-                "ALTER TABLE items ADD COLUMN pet_type VARCHAR(4) NOT NULL DEFAULT 'Both' AFTER category_id, " &
-                "ADD CONSTRAINT chk_items_pet_type CHECK (pet_type IN ('Dog', 'Cat', 'Both'))")
+            Db.Execute(conn, Nothing, $"ALTER TABLE items ADD COLUMN pet_type VARCHAR({PetTypes.MaxLength}) NOT NULL DEFAULT 'Both' AFTER category_id")
+        End If
+        ' Pet types used to be limited to Dog / Cat / Both. Lift that limit so custom pet types can be saved;
+        ' the existing values are left exactly as they are.
+        If ConstraintExists(conn, "items", "chk_items_pet_type") Then
+            Db.Execute(conn, Nothing, "ALTER TABLE items DROP CONSTRAINT chk_items_pet_type")
+        End If
+        If ColumnLength(conn, "items", "pet_type") < PetTypes.MaxLength Then
+            Db.Execute(conn, Nothing, $"ALTER TABLE items MODIFY COLUMN pet_type VARCHAR({PetTypes.MaxLength}) NOT NULL DEFAULT 'Both'")
         End If
         If Not ColumnExists(conn, "items", "description") Then
             Db.Execute(conn, Nothing, "ALTER TABLE items ADD COLUMN description VARCHAR(500) NULL AFTER expiration_date")
@@ -62,12 +68,34 @@ Public NotInheritable Class DatabaseInitializer
                 "UPDATE items i JOIN units u ON u.id = i.unit_id SET i.description = u.name " &
                 "WHERE i.description IS NULL OR TRIM(i.description) = ''")
         End If
+        ' Unit of measure. Existing items and stock records keep a blank unit (nothing is guessed);
+        ' an item gets its unit the next time it is edited.
+        If Not ColumnExists(conn, "items", "unit") Then
+            Db.Execute(conn, Nothing, "ALTER TABLE items ADD COLUMN unit VARCHAR(40) NULL AFTER quantity")
+        End If
+        If Not ColumnExists(conn, "stock_transactions", "unit") Then
+            Db.Execute(conn, Nothing, "ALTER TABLE stock_transactions ADD COLUMN unit VARCHAR(40) NULL AFTER qty_after")
+        End If
     End Sub
 
     Private Shared Function IsColumnRequired(conn As MySqlConnection, table As String, column As String) As Boolean
         Return Db.Count(conn, Nothing,
             "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @table AND COLUMN_NAME = @column AND IS_NULLABLE = 'NO'",
             Db.P("@table", table), Db.P("@column", column)) > 0
+    End Function
+
+    Private Shared Function ConstraintExists(conn As MySqlConnection, table As String, constraint As String) As Boolean
+        Return Db.Count(conn, Nothing,
+            "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = @table AND CONSTRAINT_NAME = @constraint",
+            Db.P("@table", table), Db.P("@constraint", constraint)) > 0
+    End Function
+
+    ''' <summary>The declared length of a text column, or 0 when the column does not exist.</summary>
+    Private Shared Function ColumnLength(conn As MySqlConnection, table As String, column As String) As Long
+        Dim value = Db.Scalar(conn, Nothing,
+            "SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @table AND COLUMN_NAME = @column",
+            Db.P("@table", table), Db.P("@column", column))
+        Return If(value Is Nothing OrElse TypeOf value Is DBNull, 0L, Convert.ToInt64(value))
     End Function
 
     Private Shared Function ColumnExists(conn As MySqlConnection, table As String, column As String) As Boolean

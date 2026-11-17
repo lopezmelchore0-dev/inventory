@@ -51,7 +51,7 @@
                 </Grid>
                 <ComboBox x:Name="CategoryFilter" Width="190" Margin="0,0,10,8" DisplayMemberPath="Label" SelectionChanged="Filter_Changed" ToolTip="Category"/>
                 <ComboBox x:Name="PetTypeFilter" Width="150" Margin="0,0,10,8" DisplayMemberPath="Label" SelectionChanged="Filter_Changed"
-                          ToolTip="Pet type (Dog and Cat also include items for both)"/>
+                          ToolTip="Pet type (Dog and Cat also include Dog &amp; Cat items)"/>
                 <ComboBox x:Name="SupplierFilter" Width="200" Margin="0,0,10,8" DisplayMemberPath="Label" SelectionChanged="Filter_Changed" ToolTip="Supplier"/>
                 <ComboBox x:Name="StatusFilter" Width="175" Margin="0,0,10,8" DisplayMemberPath="Label" SelectionChanged="Filter_Changed" ToolTip="Stock status"/>
                 <ComboBox x:Name="ExpiryFilter" Width="200" Margin="0,0,10,8" DisplayMemberPath="Label" SelectionChanged="Filter_Changed" ToolTip="Expiration status"/>

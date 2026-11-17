@@ -6,15 +6,16 @@ Public NotInheritable Class StockRepository
 
     Public Shared Function Insert(conn As MySqlConnection, tx As MySqlTransaction, t As StockTransaction) As Integer
         Return Db.Insert(conn, tx,
-            "INSERT INTO stock_transactions (item_id, item_name, txn_type, qty_change, qty_before, qty_after, " &
+            "INSERT INTO stock_transactions (item_id, item_name, txn_type, qty_change, qty_before, qty_after, unit, " &
             "supplier_id, supplier_name, txn_date, reason, note) " &
-            "VALUES (@item, @itemName, @type, @change, @before, @after, @supplier, @supplierName, @date, @reason, @note)",
+            "VALUES (@item, @itemName, @type, @change, @before, @after, @unit, @supplier, @supplierName, @date, @reason, @note)",
             Db.P("@item", t.ItemId),
             Db.P("@itemName", t.ItemName),
             Db.P("@type", t.TxnType),
             Db.P("@change", t.QtyChange),
             Db.P("@before", t.QtyBefore),
             Db.P("@after", t.QtyAfter),
+            Db.P("@unit", Db.NullIfBlank(t.Unit)),
             Db.P("@supplier", t.SupplierId),
             Db.P("@supplierName", Db.NullIfBlank(t.SupplierName)),
             Db.P("@date", t.TxnDate.Date),
@@ -24,17 +25,27 @@ Public NotInheritable Class StockRepository
 
     ''' <summary>Stock-in history (opening stock + deliveries) or adjustment history, newest first.</summary>
     Public Shared Function GetHistory(conn As MySqlConnection, adjustments As Boolean, limit As Integer) As List(Of StockTransaction)
-        Dim filter = If(adjustments, "txn_type = 'ADJUSTMENT'", "txn_type IN ('INITIAL', 'STOCK_IN')")
+        Dim filter = If(adjustments, "t.txn_type = 'ADJUSTMENT'", "t.txn_type IN ('INITIAL', 'STOCK_IN')")
         Return Db.Query(Of StockTransaction)(conn, Nothing,
-            $"SELECT * FROM stock_transactions WHERE {filter} ORDER BY created_at DESC, id DESC LIMIT @limit",
-            AddressOf Map, Db.P("@limit", limit))
+            $"{DisplaySelectSql} WHERE {filter} ORDER BY t.created_at DESC, t.id DESC LIMIT @limit",
+            AddressOf MapForDisplay, Db.P("@limit", limit))
     End Function
 
     ''' <summary>Every stock change whose transaction date falls within the range (both ends included), oldest first.</summary>
     Public Shared Function GetByDateRange(conn As MySqlConnection, fromDate As Date, toDate As Date) As List(Of StockTransaction)
         Return Db.Query(Of StockTransaction)(conn, Nothing,
-            "SELECT * FROM stock_transactions WHERE txn_date BETWEEN @from AND @to ORDER BY txn_date, created_at, id",
-            AddressOf Map, Db.P("@from", fromDate.Date), Db.P("@to", toDate.Date))
+            $"{DisplaySelectSql} WHERE t.txn_date BETWEEN @from AND @to ORDER BY t.txn_date, t.created_at, t.id",
+            AddressOf MapForDisplay, Db.P("@from", fromDate.Date), Db.P("@to", toDate.Date))
+    End Function
+
+    ' Records written before units existed have no unit of their own; they show the item's current unit.
+    Private Const DisplaySelectSql As String =
+        "SELECT t.*, COALESCE(t.unit, i.unit) AS display_unit FROM stock_transactions t LEFT JOIN items i ON i.id = t.item_id"
+
+    Private Shared Function MapForDisplay(r As MySqlDataReader) As StockTransaction
+        Dim t = Map(r)
+        t.Unit = Db.GetString(r, "display_unit")
+        Return t
     End Function
 
     ''' <summary>Earliest and latest dates found in items and stock records; used for the "All time" report range.</summary>
@@ -59,6 +70,7 @@ Public NotInheritable Class StockRepository
             .QtyChange = Db.GetDecimal(r, "qty_change"),
             .QtyBefore = Db.GetDecimal(r, "qty_before"),
             .QtyAfter = Db.GetDecimal(r, "qty_after"),
+            .Unit = Db.GetString(r, "unit"),
             .SupplierId = Db.GetNullableInt(r, "supplier_id"),
             .SupplierName = Db.GetString(r, "supplier_name"),
             .TxnDate = Db.GetDate(r, "txn_date"),

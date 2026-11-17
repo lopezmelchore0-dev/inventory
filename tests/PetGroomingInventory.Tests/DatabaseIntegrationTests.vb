@@ -83,19 +83,19 @@ Public Class DatabaseIntegrationTests
         ' ---- Add items ----
         Dim shampoo As New Item With {
             .Name = "Oatmeal Shampoo 500ml", .CategoryId = LookupId(LookupKind.Category, "Shampoo & Conditioner"), .PetType = PetTypes.Both,
-            .SupplierId = supplierId, .Quantity = 12D, .RetailPrice = 285.5D}
+            .SupplierId = supplierId, .Quantity = 12D, .Unit = "pcs", .RetailPrice = 285.5D}
         InventoryService.AddItem(shampoo)
         Assert.Equal(StockStatus.InStock, FindItem(shampoo.Name).Status)
         Assert.Equal(ExpirationStatus.None, FindItem(shampoo.Name).ExpiryStatus)
 
         Dim duplicate = Assert.Throws(Of InputValidationException)(
             Sub() InventoryService.AddItem(New Item With {.Name = "OATMEAL SHAMPOO 500ML", .CategoryId = shampoo.CategoryId, .PetType = PetTypes.Both,
-                                                               .SupplierId = supplierId}))
+                                                               .SupplierId = supplierId, .Unit = "pcs"}))
         Assert.True(duplicate.Errors.ContainsKey("name"))
 
         Dim clippers As New Item With {
             .Name = "Nail Clipper", .CategoryId = LookupId(LookupKind.Category, "Grooming Tools"), .PetType = PetTypes.Dog,
-            .SupplierId = supplierId, .Quantity = 0D, .RetailPrice = 350D,
+            .SupplierId = supplierId, .Quantity = 0D, .Unit = "pcs", .RetailPrice = 350D,
             .Description = "Heavy-duty clipper for large breeds"}
         InventoryService.AddItem(clippers)
         Assert.Equal(StockStatus.OutOfStock, FindItem("Nail Clipper").Status)
@@ -118,7 +118,7 @@ Public Class DatabaseIntegrationTests
 
         Dim vitamins As New Item With {
             .Name = "Cat Vitamin Gel", .CategoryId = LookupId(LookupKind.Category, ItemCategories.Vitamins), .PetType = PetTypes.Cat,
-            .SupplierId = supplierId, .Quantity = 0D, .RetailPrice = 310D}
+            .SupplierId = supplierId, .Quantity = 0D, .Unit = "g", .RetailPrice = 310D}
         InventoryService.AddItem(vitamins)
         Assert.Equal(ItemCategories.Vitamins, FindItem(vitamins.Name).CategoryName)
         Assert.Equal(PetTypes.Cat, FindItem(vitamins.Name).PetType)
@@ -217,7 +217,7 @@ Public Class DatabaseIntegrationTests
 
         ' New rows after a restore get fresh ids (AUTO_INCREMENT continues correctly).
         InventoryService.AddItem(New Item With {.Name = "Cotton Balls", .CategoryId = shampoo.CategoryId, .PetType = PetTypes.Both,
-                                                .SupplierId = supplier.Id, .Quantity = 40D, .RetailPrice = 45D})
+                                                .SupplierId = supplier.Id, .Quantity = 40D, .Unit = "pack", .RetailPrice = 45D})
         Assert.Equal(3, InventoryService.GetItems().Count)
 
         ' Tampered and non-backup files are rejected without touching data.
@@ -247,7 +247,6 @@ Public Class DatabaseIntegrationTests
 
         ' Recreate what an older install looks like: no pet_type / description columns and the combined category in use.
         Using conn = Db.Open()
-            Db.Execute(conn, Nothing, "ALTER TABLE items DROP CONSTRAINT chk_items_pet_type")
             Db.Execute(conn, Nothing, "ALTER TABLE items DROP COLUMN pet_type, DROP COLUMN description")
             Db.Execute(conn, Nothing, "ALTER TABLE items MODIFY COLUMN unit_id INT NOT NULL")   ' units were required back then
             Dim legacyId = Db.Insert(conn, Nothing, "INSERT INTO categories (name) VALUES (@name)", Db.P("@name", ItemCategories.LegacyMedicineAndVitamins))
@@ -269,6 +268,100 @@ Public Class DatabaseIntegrationTests
         Assert.DoesNotContain(categories, Function(c) c.Name = ItemCategories.LegacyMedicineAndVitamins)
         Assert.Single(categories, Function(c) c.Name = ItemCategories.Medicine)
         Assert.Contains(categories, Function(c) c.Name = ItemCategories.Vitamins)
+        ' The re-added column takes custom pet types too.
+        Dim edit = FindItem("Ear Drops")
+        edit.PetType = "Rabbit"
+        edit.Unit = "drop"
+        Assert.True(InventoryService.UpdateItem(edit))
+        Assert.Equal("Rabbit", FindItem("Ear Drops").PetType)
+    End Sub
+
+    <IntegrationFact>
+    Public Sub Initialize_LiftsTheDogCatOnlyLimit_AndKeepsExistingPetTypes()
+        ResetDatabase()
+
+        ' Recreate an install from when pet types were limited to Dog / Cat / Both.
+        Dim supplierId = SupplierService.Add(New Supplier With {.Name = "Pet Supplier", .ContactPerson = "Ana", .Phone = "09171234567", .Address = "Aparri"})
+        Dim categoryId = LookupId(LookupKind.Category, "Grooming Supplies")
+        Using conn = Db.Open()
+            Db.Execute(conn, Nothing, "ALTER TABLE items MODIFY COLUMN pet_type VARCHAR(4) NOT NULL DEFAULT 'Both'")
+            Db.Execute(conn, Nothing, "ALTER TABLE items ADD CONSTRAINT chk_items_pet_type CHECK (pet_type IN ('Dog', 'Cat', 'Both'))")
+            For Each pair In {("Dog Comb", "Dog"), ("Cat Comb", "Cat"), ("Shared Comb", "Both")}
+                Db.Execute(conn, Nothing,
+                    "INSERT INTO items (name, category_id, pet_type, quantity, unit, retail_price, supplier_id) VALUES (@name, @category, @pet, 1, 'pcs', 10, @supplier)",
+                    Db.P("@name", pair.Item1), Db.P("@category", categoryId), Db.P("@pet", pair.Item2), Db.P("@supplier", supplierId))
+            Next
+            Assert.ThrowsAny(Of Exception)(Sub() Db.Execute(conn, Nothing, "UPDATE items SET pet_type = 'Bird' WHERE name = 'Dog Comb'"))
+        End Using
+
+        DatabaseInitializer.Initialize()
+        DatabaseInitializer.Initialize()   ' idempotent
+
+        Assert.Equal(PetTypes.Dog, FindItem("Dog Comb").PetType)
+        Assert.Equal(PetTypes.Cat, FindItem("Cat Comb").PetType)
+        Assert.Equal(PetTypes.Both, FindItem("Shared Comb").PetType)
+        InventoryService.AddItem(New Item With {.Name = "Hamster Wheel", .CategoryId = categoryId, .PetType = "Guinea Pig", .SupplierId = supplierId,
+                                                .Quantity = 1D, .Unit = "pcs", .RetailPrice = 250D})
+        Assert.Equal("Guinea Pig", FindItem("Hamster Wheel").PetType)
+    End Sub
+
+    <IntegrationFact>
+    Public Sub CustomPetTypes_AreSavedSuggestedAndFiltered()
+        ResetDatabase()
+        Dim supplierId = SupplierService.Add(New Supplier With {.Name = "Exotic Supplier", .ContactPerson = "Ana", .Phone = "09171234567", .Address = "Aparri"})
+        Dim categoryId = LookupId(LookupKind.Category, "Grooming Supplies")
+        Dim newItem = Function(name As String, petType As String) New Item With {
+            .Name = name, .CategoryId = categoryId, .PetType = petType, .SupplierId = supplierId, .Quantity = 5D, .Unit = "pcs", .RetailPrice = 50D}
+
+        ' A custom pet type is saved as typed (trimmed); the editor's labels are stored as the built-in values.
+        InventoryService.AddItem(newItem("Rabbit Brush", "  Rabbit "))
+        InventoryService.AddItem(newItem("Dog Shampoo", "dog"))
+        InventoryService.AddItem(newItem("Shared Towel", PetTypes.BothLabel))
+        Assert.Equal("Rabbit", FindItem("Rabbit Brush").PetType)
+        Assert.Equal("Rabbit", FindItem("Rabbit Brush").PetTypeText)
+        Assert.Equal(PetTypes.Dog, FindItem("Dog Shampoo").PetType)
+        Assert.Equal(PetTypes.Both, FindItem("Shared Towel").PetType)
+        Assert.Contains(ActivityService.GetRecent(3), Function(a) a.Description.Contains("· Rabbit, supplier"))   ' the activity log names the custom pet type
+
+        ' The same pet type typed in another case reuses the saved spelling.
+        InventoryService.AddItem(newItem("Rabbit Pellets", "rabbit"))
+        Assert.Equal("Rabbit", FindItem("Rabbit Pellets").PetType)
+
+        ' Suggestions and filters include it once; it is not a dog item.
+        Dim suggestions = InventoryService.GetPetTypeSuggestions()
+        Assert.Equal({"Dog", "Cat", PetTypes.BothLabel, PetTypes.OtherLabel, "Rabbit"}, suggestions)
+        Assert.Equal({"Dog", "Cat", "Both", "Rabbit"}, InventoryService.GetPetTypesInUse())
+        Dim items = InventoryService.GetItems()
+        Assert.Equal({"Rabbit Brush", "Rabbit Pellets"}, items.Where(Function(i) PetTypes.Matches(i.PetType, "Rabbit")).Select(Function(i) i.Name).OrderBy(Function(n) n))
+        Assert.DoesNotContain(items.Where(Function(i) PetTypes.Matches(i.PetType, PetTypes.Dog)), Function(i) i.PetType = "Rabbit")
+
+        ' Editing: switch to another custom type, then back to a built-in one.
+        Dim edit = FindItem("Rabbit Brush")
+        edit.PetType = "Hamster"
+        Assert.True(InventoryService.UpdateItem(edit))
+        Assert.Equal("Hamster", FindItem("Rabbit Brush").PetType)
+        Assert.Contains("pet type Rabbit → Hamster", ActivityService.GetRecent(1).Single().Description)
+        edit = FindItem("Rabbit Brush")
+        edit.PetType = "Cat"
+        Assert.True(InventoryService.UpdateItem(edit))
+        Assert.Equal(PetTypes.Cat, FindItem("Rabbit Brush").PetType)
+
+        ' Blank and over-long pet types are refused.
+        Dim blank = Assert.Throws(Of InputValidationException)(Sub() InventoryService.AddItem(newItem("No Pet", " ")))
+        Assert.True(blank.Errors.ContainsKey("pettype"))
+        Dim tooLong = Assert.Throws(Of InputValidationException)(Sub() InventoryService.AddItem(newItem("Long Pet", New String("x"c, PetTypes.MaxLength + 1))))
+        Assert.True(tooLong.Errors.ContainsKey("pettype"))
+
+        ' Backup and restore keep custom pet types.
+        Dim path = IO.Path.Combine(IO.Path.GetTempPath(), $"pawstock-pettype-{Guid.NewGuid():N}.json")
+        Try
+            BackupService.CreateBackup(path)
+            ResetDatabase()
+            BackupService.Restore(BackupService.ReadBackup(path))
+            Assert.Equal("Rabbit", FindItem("Rabbit Pellets").PetType)
+        Finally
+            IO.File.Delete(path)
+        End Try
     End Sub
 
     <IntegrationFact>
@@ -302,14 +395,139 @@ Public Class DatabaseIntegrationTests
         ' The upgrade runs once: clearing a description later is not undone on the next start-up.
         Dim edited = FindItem("No Description")
         edited.Description = ""
+        edited.Unit = "ml"   ' items from before units need one when they are next edited
         InventoryService.UpdateItem(edited)
         DatabaseInitializer.Initialize()
         Assert.Null(FindItem("No Description").Description)
 
-        ' New items need no unit at all.
+        ' New items need no legacy unit_id (their unit of measure lives in items.unit).
         Dim supplier = SupplierService.GetAll().Single()
         InventoryService.AddItem(New Item With {.Name = "Brand New", .CategoryId = edited.CategoryId, .PetType = PetTypes.Cat, .SupplierId = supplier.Id,
-                                                .Quantity = 1D, .RetailPrice = 5D, .Description = "30 tablets"})
+                                                .Quantity = 1D, .Unit = "pcs", .RetailPrice = 5D, .Description = "30 tablets"})
         Assert.Equal("30 tablets", FindItem("Brand New").Description)
+    End Sub
+
+    <IntegrationFact>
+    Public Sub Initialize_AddsUnitColumns_WithoutChangingExistingData()
+        ResetDatabase()
+        Using conn = Db.Open()
+            ' An install from before units of measure.
+            Db.Execute(conn, Nothing, "ALTER TABLE items DROP COLUMN unit")
+            Db.Execute(conn, Nothing, "ALTER TABLE stock_transactions DROP COLUMN unit")
+            Dim categoryId = Convert.ToInt32(Db.Scalar(conn, Nothing, "SELECT id FROM categories WHERE name = 'Accessories'"))
+            Dim supplierId = Db.Insert(conn, Nothing,
+                "INSERT INTO suppliers (name, contact_person, phone, address) VALUES ('Old Supplier', 'Ana', '09171234567', 'Aparri')")
+            Dim itemId = Db.Insert(conn, Nothing,
+                "INSERT INTO items (name, category_id, quantity, retail_price, supplier_id, description) VALUES ('Old Collar', @category, 7.5, 60, @supplier, 'Red')",
+                Db.P("@category", categoryId), Db.P("@supplier", supplierId))
+            Db.Execute(conn, Nothing,
+                "INSERT INTO stock_transactions (item_id, item_name, txn_type, qty_change, qty_before, qty_after, txn_date) VALUES (@id, 'Old Collar', 'INITIAL', 7.5, 0, 7.5, CURDATE())",
+                Db.P("@id", itemId))
+        End Using
+
+        DatabaseInitializer.Initialize()
+        DatabaseInitializer.Initialize()   ' idempotent
+
+        Dim old = FindItem("Old Collar")
+        Assert.Null(old.Unit)                      ' nothing is guessed
+        Assert.Equal(7.5D, old.Quantity)
+        Assert.Equal("Red", old.Description)
+        Assert.Equal("7.5", old.QuantityText)      ' shown exactly as before
+        Assert.Null(StockService.GetHistory(adjustments:=False).Single().Unit)
+    End Sub
+
+    <IntegrationFact>
+    Public Sub Units_AreSavedAndUsedThroughoutTheStockWorkflow()
+        ResetDatabase()
+        Dim supplierId = SupplierService.Add(New Supplier With {.Name = "Unit Supplier", .ContactPerson = "Ana", .Phone = "09171234567", .Address = "Aparri"})
+        Dim categoryId = LookupId(LookupKind.Category, "Grooming Supplies")
+        Dim newItem = Function(name As String, quantity As Decimal, unit As String) New Item With {
+            .Name = name, .CategoryId = categoryId, .PetType = PetTypes.Both, .SupplierId = supplierId, .Quantity = quantity, .Unit = unit, .RetailPrice = 10D}
+
+        ' A dropdown label is stored as its short unit; a custom unit is stored as typed.
+        InventoryService.AddItem(newItem("Gauze Pads", 10D, "Pieces (pcs)"))
+        InventoryService.AddItem(newItem("Coat Spray", 1.5D, "Liters (L)"))
+        InventoryService.AddItem(newItem("Shampoo Sachet", 0D, "sachet"))
+        Assert.Equal("pcs", FindItem("Gauze Pads").Unit)
+        Assert.Equal("10 pcs", FindItem("Gauze Pads").QuantityText)
+        Assert.Equal("L", FindItem("Coat Spray").Unit)
+        Assert.Equal("sachet", FindItem("Shampoo Sachet").Unit)
+        Dim suggestions = InventoryService.GetUnitSuggestions()
+        Assert.Contains("sachet", suggestions)
+        Assert.Single(suggestions, Function(s) s = "Pieces (pcs)")
+
+        ' A unit is required, and counted units take whole numbers.
+        Assert.True(Assert.Throws(Of InputValidationException)(Function() InventoryService.AddItem(newItem("No Unit", 1D, "Other (Custom Unit)"))).Errors.ContainsKey("unit"))
+        Assert.True(Assert.Throws(Of InputValidationException)(Function() InventoryService.AddItem(newItem("Half Piece", 2.5D, "pcs"))).Errors.ContainsKey("quantity"))
+
+        ' Stock in and adjustments are counted in the item's unit, and every stock record keeps it.
+        Dim gauzeId = FindItem("Gauze Pads").Id
+        StockService.StockIn(gauzeId, 5D, Date.Today, supplierId, Nothing)
+        Assert.Equal(13D, StockService.Adjust(gauzeId, AdjustmentMode.Deduct, 2D, "Damaged", Nothing))
+        Assert.Equal(13D, FindItem("Gauze Pads").Quantity)
+        Assert.True(Assert.Throws(Of InputValidationException)(Sub() StockService.StockIn(gauzeId, 0.5D, Date.Today, Nothing, Nothing)).Errors.ContainsKey("quantity"))
+        Assert.True(Assert.Throws(Of InputValidationException)(Function() StockService.Adjust(gauzeId, AdjustmentMode.Deduct, 1.5D, "Damaged", Nothing)).Errors.ContainsKey("amount"))
+        Assert.Equal(13D, FindItem("Gauze Pads").Quantity)   ' rejected changes leave stock untouched
+        Dim sprayId = FindItem("Coat Spray").Id
+        StockService.StockIn(sprayId, 0.75D, Date.Today, Nothing, Nothing)
+        Assert.Equal(2.25D, FindItem("Coat Spray").Quantity)
+
+        Using conn = Db.Open()
+            Assert.Equal(3, Db.Count(conn, Nothing, "SELECT COUNT(*) FROM stock_transactions WHERE item_id = @id AND unit = 'pcs'", Db.P("@id", gauzeId)))
+            Assert.Equal(2, Db.Count(conn, Nothing, "SELECT COUNT(*) FROM stock_transactions WHERE item_id = @id AND unit = 'L'", Db.P("@id", sprayId)))
+        End Using
+        Assert.Equal("−2 pcs", StockService.GetHistory(adjustments:=True).Single().ChangeText)
+        Assert.Contains("Received 5 pcs", ActivityService.Search(Date.Today, Date.Today, ActivityTypes.StockReceived, "Gauze", 10).Single().Description)
+
+        ' Changing the unit never converts the quantity, and fractional stock cannot become a counted unit.
+        Dim spray = FindItem("Coat Spray")
+        spray.Unit = "pcs"
+        Assert.True(Assert.Throws(Of InputValidationException)(Function() InventoryService.UpdateItem(spray)).Errors.ContainsKey("unit"))
+        spray.Unit = "Milliliters (ml)"
+        Assert.True(InventoryService.UpdateItem(spray))
+        Assert.Equal("ml", FindItem("Coat Spray").Unit)
+        Assert.Equal(2.25D, FindItem("Coat Spray").Quantity)
+        Assert.Contains("unit L → ml", ActivityService.GetRecent(1).Single().Description)
+
+        ' Dashboard total is kept per unit.
+        Assert.Equal("2.25 ml · 13 pcs · 0 sachet", InventoryService.LoadSnapshot().Summary.StockByUnit)
+
+        ' Backup → change → restore keeps every unit, including those on stock records.
+        Dim folder = IO.Path.Combine(IO.Path.GetTempPath(), "pawstock-tests")
+        IO.Directory.CreateDirectory(folder)
+        Dim backupPath = IO.Path.Combine(folder, "units-backup.json")
+        BackupService.CreateBackup(backupPath)
+        Dim gauze = FindItem("Gauze Pads")
+        gauze.Unit = "Per Box"
+        Assert.True(InventoryService.UpdateItem(gauze))
+        BackupService.Restore(BackupService.ReadBackup(backupPath))
+        Assert.Equal("pcs", FindItem("Gauze Pads").Unit)
+        Assert.Equal("ml", FindItem("Coat Spray").Unit)
+        Using conn = Db.Open()
+            Assert.Equal(2, Db.Count(conn, Nothing, "SELECT COUNT(*) FROM stock_transactions WHERE item_id = @id AND unit = 'L'", Db.P("@id", sprayId)))
+        End Using
+
+        ' Items from before units keep a blank unit: editing one asks for a unit, and their older stock records show the item's unit.
+        Using conn = Db.Open()
+            Db.Execute(conn, Nothing, "UPDATE items SET unit = NULL WHERE name = 'Shampoo Sachet'")
+            Db.Execute(conn, Nothing, "UPDATE stock_transactions SET unit = NULL WHERE item_id = @id", Db.P("@id", gauzeId))
+        End Using
+        Dim legacy = FindItem("Shampoo Sachet")
+        Assert.Equal("0", legacy.QuantityText)
+        legacy.Description = "10 ml"
+        Assert.True(Assert.Throws(Of InputValidationException)(Function() InventoryService.UpdateItem(legacy)).Errors.ContainsKey("unit"))
+        Assert.All(StockService.GetHistory(adjustments:=False).Where(Function(t) t.ItemId.GetValueOrDefault() = gauzeId), Sub(t) Assert.Equal("pcs", t.Unit))
+
+        ' A backup without any units (the format of earlier versions) has no unit fields and restores with blank units.
+        Using conn = Db.Open()
+            Db.Execute(conn, Nothing, "UPDATE items SET unit = NULL")
+            Db.Execute(conn, Nothing, "UPDATE stock_transactions SET unit = NULL")
+        End Using
+        Dim oldStylePath = IO.Path.Combine(folder, "units-old-style.json")
+        BackupService.CreateBackup(oldStylePath)
+        Assert.DoesNotContain("""Unit"":", IO.File.ReadAllText(oldStylePath))
+        Assert.Empty(BackupService.Validate(BackupService.ReadBackup(oldStylePath)))
+        BackupService.Restore(BackupService.ReadBackup(oldStylePath))
+        Assert.All(InventoryService.GetItems(), Sub(i) Assert.Null(i.Unit))
     End Sub
 End Class

@@ -5,6 +5,8 @@ Public Class Item
     Public Property CategoryName As String = ""
     Public Property PetType As String = ""
     Public Property Quantity As Decimal
+    ''' <summary>Unit of measure the quantity is counted in (see MeasurementUnits). Nothing for items added before units existed.</summary>
+    Public Property Unit As String
     Public Property RetailPrice As Decimal
     Public Property SupplierId As Integer
     Public Property SupplierName As String = ""
@@ -21,7 +23,14 @@ Public Class Item
 
     Public ReadOnly Property QuantityText As String
         Get
-            Return Fmt.Qty(Quantity)
+            Return Fmt.Qty(Quantity, Unit)
+        End Get
+    End Property
+
+    ''' <summary>The unit as shown next to an amount box, e.g. "pcs"; blank when the item has no unit.</summary>
+    Public ReadOnly Property UnitText As String
+        Get
+            Return MeasurementUnits.Display(Unit, 2D)
         End Get
     End Property
 

@@ -50,7 +50,7 @@
                     </StackPanel>
                     <StackPanel Width="180" Margin="0,0,0,8">
                         <TextBlock Style="{StaticResource LabelText}" Text="Pet Type"/>
-                        <ComboBox x:Name="PetTypeBox" DisplayMemberPath="Label" ToolTip="Optional: Dog and Cat also include items for both"/>
+                        <ComboBox x:Name="PetTypeBox" DisplayMemberPath="Label" ToolTip="Optional: Dog and Cat also include Dog &amp; Cat items"/>
                     </StackPanel>
                 </WrapPanel>
 

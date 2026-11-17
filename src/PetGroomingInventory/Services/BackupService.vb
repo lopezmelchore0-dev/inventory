@@ -61,6 +61,9 @@ Public Class ItemRow
     Public Property PetType As String
     <JsonIgnore(Condition:=JsonIgnoreCondition.WhenWritingNull)>
     Public Property Description As String
+    ' Unit of measure. Same rule: omitted when null, and older backups restore with no unit.
+    <JsonIgnore(Condition:=JsonIgnoreCondition.WhenWritingNull)>
+    Public Property Unit As String
 End Class
 
 Public Class StockTransactionRow
@@ -77,6 +80,8 @@ Public Class StockTransactionRow
     Public Property Reason As String
     Public Property Note As String
     Public Property CreatedAt As Date
+    <JsonIgnore(Condition:=JsonIgnoreCondition.WhenWritingNull)>
+    Public Property Unit As String
 End Class
 
 Public Class ActivityRow
@@ -219,7 +224,8 @@ Public NotInheritable Class BackupService
                     .CreatedAt = Db.GetDate(r, "created_at"),
                     .UpdatedAt = Db.GetDate(r, "updated_at"),
                     .PetType = Db.GetString(r, "pet_type"),
-                    .Description = Db.GetString(r, "description")
+                    .Description = Db.GetString(r, "description"),
+                    .Unit = Db.GetString(r, "unit")
                 }),
             .StockTransactions = Db.Query(Of StockTransactionRow)(conn, tx, "SELECT * FROM stock_transactions ORDER BY id",
                 Function(r)
@@ -228,7 +234,7 @@ Public NotInheritable Class BackupService
                         .Id = t.Id, .ItemId = t.ItemId, .ItemName = t.ItemName, .TxnType = t.TxnType,
                         .QtyChange = t.QtyChange, .QtyBefore = t.QtyBefore, .QtyAfter = t.QtyAfter,
                         .SupplierId = t.SupplierId, .SupplierName = t.SupplierName, .TxnDate = t.TxnDate.Date,
-                        .Reason = t.Reason, .Note = t.Note, .CreatedAt = t.CreatedAt
+                        .Reason = t.Reason, .Note = t.Note, .CreatedAt = t.CreatedAt, .Unit = t.Unit
                     }
                 End Function),
             .Activities = Db.Query(Of ActivityRow)(conn, tx, "SELECT * FROM activity_log ORDER BY id",
@@ -315,6 +321,7 @@ Public NotInheritable Class BackupService
             If it.Description IsNot Nothing AndAlso it.Description.Length > InventoryService.MaxDescriptionLength Then
                 errors.Add($"Item ""{it.Name}"" has a description that is too long.")
             End If
+            If it.Unit IsNot Nothing AndAlso it.Unit.Length > MeasurementUnits.MaxLength Then errors.Add($"Item ""{it.Name}"" has a unit that is too long.")
         Next
 
         Dim itemIds = d.Items.Select(Function(i) i.Id).ToHashSet()
@@ -324,6 +331,7 @@ Public NotInheritable Class BackupService
             If t.QtyBefore < 0 OrElse t.QtyAfter < 0 Then errors.Add($"Stock record #{t.Id} has a negative quantity.")
             If t.ItemId.HasValue AndAlso Not itemIds.Contains(t.ItemId.Value) Then errors.Add($"Stock record #{t.Id} refers to a missing item.")
             If t.SupplierId.HasValue AndAlso Not supplierIds.Contains(t.SupplierId.Value) Then errors.Add($"Stock record #{t.Id} refers to a missing supplier.")
+            If t.Unit IsNot Nothing AndAlso t.Unit.Length > MeasurementUnits.MaxLength Then errors.Add($"Stock record #{t.Id} has a unit that is too long.")
         Next
 
         CheckUnique(errors, d.Activities.Select(Function(a) a.Id), "activity id")
@@ -386,20 +394,20 @@ Public NotInheritable Class BackupService
                         Dim description = it.Description
                         If String.IsNullOrWhiteSpace(description) AndAlso it.UnitId.HasValue Then unitNames.TryGetValue(it.UnitId.Value, description)
                         Db.Execute(conn, tx,
-                            "INSERT INTO items (id, name, category_id, pet_type, quantity, unit_id, retail_price, supplier_id, expiration_date, description, is_sample, created_at, updated_at) " &
-                            "VALUES (@id, @name, @category, @petType, @quantity, @unit, @price, @supplier, @expiration, @description, @sample, @created, @updated)",
+                            "INSERT INTO items (id, name, category_id, pet_type, quantity, unit, unit_id, retail_price, supplier_id, expiration_date, description, is_sample, created_at, updated_at) " &
+                            "VALUES (@id, @name, @category, @petType, @quantity, @measure, @unit, @price, @supplier, @expiration, @description, @sample, @created, @updated)",
                             Db.P("@id", it.Id), Db.P("@name", it.Name), Db.P("@category", it.CategoryId), Db.P("@petType", If(it.PetType, PetTypes.Both)),
-                            Db.P("@quantity", it.Quantity),
+                            Db.P("@quantity", it.Quantity), Db.P("@measure", Db.NullIfBlank(it.Unit)),
                             Db.P("@unit", it.UnitId), Db.P("@price", it.RetailPrice), Db.P("@supplier", it.SupplierId),
                             Db.P("@expiration", it.ExpirationDate), Db.P("@description", Db.NullIfBlank(description)), Db.P("@sample", it.IsSample),
                             Db.P("@created", it.CreatedAt), Db.P("@updated", it.UpdatedAt))
                     Next
                     For Each t In d.StockTransactions
                         Db.Execute(conn, tx,
-                            "INSERT INTO stock_transactions (id, item_id, item_name, txn_type, qty_change, qty_before, qty_after, supplier_id, supplier_name, txn_date, reason, note, created_at) " &
-                            "VALUES (@id, @item, @itemName, @type, @change, @before, @after, @supplier, @supplierName, @date, @reason, @note, @created)",
+                            "INSERT INTO stock_transactions (id, item_id, item_name, txn_type, qty_change, qty_before, qty_after, unit, supplier_id, supplier_name, txn_date, reason, note, created_at) " &
+                            "VALUES (@id, @item, @itemName, @type, @change, @before, @after, @unit, @supplier, @supplierName, @date, @reason, @note, @created)",
                             Db.P("@id", t.Id), Db.P("@item", t.ItemId), Db.P("@itemName", t.ItemName), Db.P("@type", t.TxnType),
-                            Db.P("@change", t.QtyChange), Db.P("@before", t.QtyBefore), Db.P("@after", t.QtyAfter),
+                            Db.P("@change", t.QtyChange), Db.P("@before", t.QtyBefore), Db.P("@after", t.QtyAfter), Db.P("@unit", Db.NullIfBlank(t.Unit)),
                             Db.P("@supplier", t.SupplierId), Db.P("@supplierName", t.SupplierName), Db.P("@date", t.TxnDate.Date),
                             Db.P("@reason", t.Reason), Db.P("@note", t.Note), Db.P("@created", t.CreatedAt))
                     Next
