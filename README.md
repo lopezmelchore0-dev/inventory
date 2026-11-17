@@ -60,7 +60,7 @@ Every page requires an Admin to be signed in. There is only one role, **Admin**,
 
 | Screen | How it works |
 |---|---|
-| **Register** | Shown automatically the first time the app runs, while no Admin exists. Fields: Full Name, Username, Password, Confirm Password, Security Question (from a fixed list) and Security Answer. After the first account exists, registration from the Login screen is closed. Further Admins are added from **My Profile → Add Admin Account**. |
+| **Register** | Shown automatically the first time the app runs, while no Admin exists. Fields: Full Name, Username, Password, Confirm Password, Security Question (from a fixed list) and Security Answer. After the first account exists, registration is closed. |
 | **Login** | Username + Password. **Remember me** remembers only the username on this computer (`%LOCALAPPDATA%\PawStock\login.json`); the password is always required. A failed sign-in always says "Invalid username or password." |
 | **Forgot Password?** | Username → answer your security question → new password. The new password must differ from the previous one. Failures always say "The information provided could not be verified." A username that doesn't exist still gets a question, so the screen never reveals which usernames exist. |
 | **My Profile** | Shows Full Name, Username, Role and last login. Lets you edit Full Name, Username, Security Question and Answer; your current password is required to save. The current answer is never shown. |
@@ -74,7 +74,7 @@ Every page requires an Admin to be signed in. There is only one role, **Admin**,
 - After 5 failed sign-in or recovery attempts for a username within 15 minutes, that username is locked for 15 minutes. The same applies to usernames that don't exist.
 - Admin accounts are **not** included in backups, so a restore never removes or rolls back an account.
 
-**Locked out completely?** If an Admin forgets both the password and the security answer, no one can reset it from inside the app, not even another Admin. Another Admin can still sign in and add a new account for that person. As a last resort, delete that person's row from the `admin_accounts` table in phpMyAdmin. If no Admin is left, the app opens Register again on the next start.
+**Locked out completely?** If an Admin forgets both the password and the security answer, no one can reset it from inside the app. As a last resort, delete that person's row from the `admin_accounts` table in phpMyAdmin. If no Admin is left, the app opens Register again on the next start.
 
 ### Stock status rules (configurable in Settings)
 

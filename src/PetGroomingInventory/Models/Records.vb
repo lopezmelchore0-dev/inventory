@@ -56,6 +56,13 @@ Public Class StockTransaction
         End Get
     End Property
 
+    ''' <summary>The recorded unit for the history Unit column, e.g. "bundles"; "—" for records without a unit.</summary>
+    Public ReadOnly Property UnitText As String
+        Get
+            Return If(String.IsNullOrWhiteSpace(Unit), "—", MeasurementUnits.Display(Unit, QtyChange))
+        End Get
+    End Property
+
     Public ReadOnly Property BeforeAfterText As String
         Get
             Return $"{Fmt.Qty(QtyBefore)} → {Fmt.Qty(QtyAfter, Unit)}"

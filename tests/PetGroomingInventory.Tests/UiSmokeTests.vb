@@ -81,7 +81,7 @@ Public Class UiSmokeTests
         Assert.Equal(Visibility.Visible, shell.ShellRoot.Visibility)
         Assert.Equal(Visibility.Collapsed, shell.AuthPanel.Visibility)
         Assert.Equal("Maria Santos", shell.AccountNameText.Text)
-        For Each key In {PageKey.Profile, PageKey.ChangePassword, PageKey.AddAdmin, PageKey.Settings, PageKey.Reports, PageKey.Help}
+        For Each key In {PageKey.Profile, PageKey.ChangePassword, PageKey.Settings, PageKey.Reports, PageKey.Help}
             Assert.NotNull(shell.NavigateTo(key))
             Layout(shell)
         Next
@@ -117,6 +117,13 @@ Public Class UiSmokeTests
             Layout(dialog)
         Next
         Assert.True(DirectCast(dialogs(4), StockInWindow).HasItems)
+
+        ' The read-only Unit field shows the preselected item's registered unit (nothing typed yet: plural form).
+        Dim expectedUnit = If(String.IsNullOrWhiteSpace(item.Unit), StockUnitField.NoUnitText, MeasurementUnits.Display(item.Unit, 2D))
+        Assert.Equal("", DirectCast(dialogs(4), StockInWindow).UnitBox.Text)
+        Assert.Equal(expectedUnit, DirectCast(dialogs(5), StockInWindow).UnitBox.Text)
+        Assert.Equal(expectedUnit, DirectCast(dialogs(6), StockAdjustmentWindow).UnitBox.Text)
+        Assert.True(DirectCast(dialogs(5), StockInWindow).UnitBox.IsReadOnly)
 
         CheckDescriptionBox()
         CheckItemSearchBox()

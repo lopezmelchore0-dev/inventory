@@ -130,18 +130,18 @@ Public Class DatabaseIntegrationTests
         InventoryService.DeleteItem(FindItem(vitamins.Name).Id)
 
         ' ---- Stock in ----
-        StockService.StockIn(FindItem("Nail Clipper").Id, 5D, Date.Today, supplierId, "DR #1001")
+        StockService.StockIn(FindItem("Nail Clipper").Id, 5D, Date.Today, supplierId, "DR #1001", "pcs")
         Assert.Equal(5D, FindItem("Nail Clipper").Quantity)
         Assert.Equal(StockStatus.CriticalStock, FindItem("Nail Clipper").Status)
         Dim future = Assert.Throws(Of InputValidationException)(
-            Sub() StockService.StockIn(FindItem("Nail Clipper").Id, 1D, Date.Today.AddDays(1), Nothing, Nothing))
+            Sub() StockService.StockIn(FindItem("Nail Clipper").Id, 1D, Date.Today.AddDays(1), Nothing, Nothing, "pcs"))
         Assert.True(future.Errors.ContainsKey("date"))
 
         ' ---- Adjustments ----
         Dim shampooId = FindItem(shampoo.Name).Id
-        Assert.Throws(Of InputValidationException)(Sub() StockService.Adjust(shampooId, AdjustmentMode.Deduct, 3D, Nothing, Nothing))
-        Assert.Throws(Of InputValidationException)(Sub() StockService.Adjust(shampooId, AdjustmentMode.Deduct, 50D, "Damaged", Nothing))
-        Assert.Equal(9D, StockService.Adjust(shampooId, AdjustmentMode.Deduct, 3D, "Damaged", "Dropped bottles"))
+        Assert.Throws(Of InputValidationException)(Sub() StockService.Adjust(shampooId, AdjustmentMode.Deduct, 3D, Nothing, Nothing, "pcs"))
+        Assert.Throws(Of InputValidationException)(Sub() StockService.Adjust(shampooId, AdjustmentMode.Deduct, 50D, "Damaged", Nothing, "pcs"))
+        Assert.Equal(9D, StockService.Adjust(shampooId, AdjustmentMode.Deduct, 3D, "Damaged", "Dropped bottles", "pcs"))
         Assert.Equal(StockStatus.LowStock, FindItem(shampoo.Name).Status)
 
         Dim stockIns = StockService.GetHistory(adjustments:=False)
@@ -462,14 +462,14 @@ Public Class DatabaseIntegrationTests
 
         ' Stock in and adjustments are counted in the item's unit, and every stock record keeps it.
         Dim gauzeId = FindItem("Gauze Pads").Id
-        StockService.StockIn(gauzeId, 5D, Date.Today, supplierId, Nothing)
-        Assert.Equal(13D, StockService.Adjust(gauzeId, AdjustmentMode.Deduct, 2D, "Damaged", Nothing))
+        StockService.StockIn(gauzeId, 5D, Date.Today, supplierId, Nothing, "pcs")
+        Assert.Equal(13D, StockService.Adjust(gauzeId, AdjustmentMode.Deduct, 2D, "Damaged", Nothing, "pcs"))
         Assert.Equal(13D, FindItem("Gauze Pads").Quantity)
-        Assert.True(Assert.Throws(Of InputValidationException)(Sub() StockService.StockIn(gauzeId, 0.5D, Date.Today, Nothing, Nothing)).Errors.ContainsKey("quantity"))
-        Assert.True(Assert.Throws(Of InputValidationException)(Function() StockService.Adjust(gauzeId, AdjustmentMode.Deduct, 1.5D, "Damaged", Nothing)).Errors.ContainsKey("amount"))
+        Assert.True(Assert.Throws(Of InputValidationException)(Sub() StockService.StockIn(gauzeId, 0.5D, Date.Today, Nothing, Nothing, "pcs")).Errors.ContainsKey("quantity"))
+        Assert.True(Assert.Throws(Of InputValidationException)(Function() StockService.Adjust(gauzeId, AdjustmentMode.Deduct, 1.5D, "Damaged", Nothing, "pcs")).Errors.ContainsKey("amount"))
         Assert.Equal(13D, FindItem("Gauze Pads").Quantity)   ' rejected changes leave stock untouched
         Dim sprayId = FindItem("Coat Spray").Id
-        StockService.StockIn(sprayId, 0.75D, Date.Today, Nothing, Nothing)
+        StockService.StockIn(sprayId, 0.75D, Date.Today, Nothing, Nothing, "L")
         Assert.Equal(2.25D, FindItem("Coat Spray").Quantity)
 
         Using conn = Db.Open()
@@ -529,5 +529,50 @@ Public Class DatabaseIntegrationTests
         Assert.Empty(BackupService.Validate(BackupService.ReadBackup(oldStylePath)))
         BackupService.Restore(BackupService.ReadBackup(oldStylePath))
         Assert.All(InventoryService.GetItems(), Sub(i) Assert.Null(i.Unit))
+    End Sub
+
+    <IntegrationFact>
+    Public Sub StockChanges_AreRejectedWhenTheUnitDiffersFromTheItemsRegisteredUnit()
+        ResetDatabase()
+        Dim supplierId = SupplierService.Add(New Supplier With {.Name = "Bundle Supplier", .ContactPerson = "Ana", .Phone = "09171234567", .Address = "Aparri"})
+        InventoryService.AddItem(New Item With {
+            .Name = "Cotton Balls", .CategoryId = LookupId(LookupKind.Category, "Grooming Supplies"), .PetType = PetTypes.Both,
+            .SupplierId = supplierId, .Quantity = 4D, .Unit = "Per Bundle", .RetailPrice = 20D})
+        Dim itemId = FindItem("Cotton Balls").Id
+        Dim countRecords = Function()
+                               Using conn = Db.Open()
+                                   Return Db.Count(conn, Nothing, "SELECT COUNT(*) FROM stock_transactions WHERE item_id = @id", Db.P("@id", itemId))
+                               End Using
+                           End Function
+
+        ' The registered unit (given as its value or its dropdown label) is accepted and saved on the record.
+        StockService.StockIn(itemId, 5D, Date.Today, supplierId, Nothing, "bundle")
+        Assert.Equal(1D, StockService.Adjust(itemId, AdjustmentMode.Deduct, 8D, "Damaged", Nothing, "Per Bundle"))
+        Assert.All(StockService.GetHistory(adjustments:=False).Concat(StockService.GetHistory(adjustments:=True)),
+                   Sub(t) Assert.Equal("bundle", t.Unit))
+        Assert.Equal("−8 bundles", StockService.GetHistory(adjustments:=True).Single().ChangeText)
+        Assert.Equal("bundles", StockService.GetHistory(adjustments:=True).Single().UnitText)
+
+        ' The unit changes after a form was opened with the old one: nothing is recorded in the wrong unit.
+        Dim edited = FindItem("Cotton Balls")
+        edited.Unit = "Per Box"
+        Assert.True(InventoryService.UpdateItem(edited))
+        Dim recordsBefore = countRecords()
+        Dim stockIn = Assert.Throws(Of InputValidationException)(Sub() StockService.StockIn(itemId, 2D, Date.Today, Nothing, Nothing, "bundle"))
+        Assert.True(stockIn.Errors.ContainsKey("unit"))
+        Assert.Contains("boxes", stockIn.Errors("unit"))
+        Dim adjust = Assert.Throws(Of InputValidationException)(Function() StockService.Adjust(itemId, AdjustmentMode.Add, 2D, "Count correction", Nothing, "bundle"))
+        Assert.True(adjust.Errors.ContainsKey("unit"))
+        Assert.Equal(1D, FindItem("Cotton Balls").Quantity)
+        Assert.Equal(recordsBefore, countRecords())
+
+        ' An item without a registered unit takes no stock changes until one is set.
+        Using conn = Db.Open()
+            Db.Execute(conn, Nothing, "UPDATE items SET unit = NULL WHERE id = @id", Db.P("@id", itemId))
+        End Using
+        Assert.True(Assert.Throws(Of InputValidationException)(Sub() StockService.StockIn(itemId, 2D, Date.Today, Nothing, Nothing, Nothing)).Errors.ContainsKey("unit"))
+        Assert.True(Assert.Throws(Of InputValidationException)(Function() StockService.Adjust(itemId, AdjustmentMode.Add, 2D, "Count correction", Nothing, Nothing)).Errors.ContainsKey("unit"))
+        Assert.Equal(1D, FindItem("Cotton Balls").Quantity)
+        Assert.Equal(recordsBefore, countRecords())
     End Sub
 End Class

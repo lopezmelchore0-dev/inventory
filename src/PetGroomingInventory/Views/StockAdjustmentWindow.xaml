@@ -68,18 +68,25 @@
             </StackPanel>
 
             <StackPanel Grid.Row="3" Margin="0,0,0,14">
-                <TextBlock x:Name="AmountLabel" Text="Quantity to deduct *" Style="{StaticResource LabelText}"/>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="110"/>
                     </Grid.ColumnDefinitions>
-                    <TextBox x:Name="AmountBox" Tag="0" MaxLength="12" TextChanged="Input_Changed"/>
-                    <!-- The selected item's unit: adjustments are always counted in it -->
-                    <TextBlock x:Name="UnitSuffix" Grid.Column="1" Margin="10,0,2,0" MaxWidth="120" VerticalAlignment="Center"
-                               FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
+                    <StackPanel>
+                        <TextBlock x:Name="AmountLabel" Text="Quantity to deduct *" Style="{StaticResource LabelText}" TextTrimming="CharacterEllipsis"/>
+                        <TextBox x:Name="AmountBox" Tag="0" MaxLength="12" TextChanged="Input_Changed"/>
+                    </StackPanel>
+                    <!-- The selected item's registered unit: read-only, adjustments are always counted in it -->
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Unit" Style="{StaticResource LabelText}"/>
+                        <TextBox x:Name="UnitBox" IsReadOnly="True" Focusable="False" IsTabStop="False" FontWeight="SemiBold"
+                                 Background="{StaticResource SurfaceAltBrush}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </StackPanel>
                 </Grid>
                 <TextBlock x:Name="AmountError" Style="{StaticResource ErrorText}"/>
+                <TextBlock x:Name="UnitError" Style="{StaticResource ErrorText}"/>
             </StackPanel>
             <StackPanel Grid.Row="3" Grid.Column="2" Margin="0,0,0,14">
                 <TextBlock Text="Reason *" Style="{StaticResource LabelText}"/>

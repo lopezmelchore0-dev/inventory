@@ -18,6 +18,7 @@ Class StockAdjustmentWindow
         _errors = New FormErrors(GeneralError)
         _errors.Register("item", ItemError, ItemBox)
         _errors.Register("amount", AmountError, AmountBox)
+        _errors.Register("unit", UnitError, UnitBox)
         _errors.Register("reason", ReasonError, ReasonBox)
         _errors.Register("note", NoteError, NoteBox)
 
@@ -71,7 +72,7 @@ Class StockAdjustmentWindow
         End Select
         NoteLabel.Text = If(Reason = StockService.OtherReason, "Note * (describe the reason)", "Note (optional)")
 
-        UnitSuffix.Text = If(item?.UnitText, "")
+        StockUnitField.Refresh(UnitBox, UnitError, item, AmountBox.Text)
         If item Is Nothing Then
             CurrentPanel.Visibility = Visibility.Collapsed
             PreviewPanel.Visibility = Visibility.Collapsed
@@ -108,6 +109,8 @@ Class StockAdjustmentWindow
 
         Dim amount As Decimal
         Dim errors As New Dictionary(Of String, String)
+        Dim unitError = StockService.CheckUnit(item.Unit, item.Unit)
+        If unitError IsNot Nothing Then errors("unit") = unitError
         If String.IsNullOrWhiteSpace(AmountBox.Text) Then
             errors("amount") = "Enter a quantity."
         ElseIf Not InputValidator.TryParseAmount(AmountBox.Text, amount) Then
@@ -127,7 +130,7 @@ Class StockAdjustmentWindow
         If Not Dialogs.Confirm("Confirm stock adjustment", message, "Apply Adjustment") Then Return
 
         Try
-            Dim result = StockService.Adjust(item.Id, Mode, amount, Reason, NoteBox.Text)
+            Dim result = StockService.Adjust(item.Id, Mode, amount, Reason, NoteBox.Text, expectedUnit:=item.Unit)
             ResultMessage = $"Stock of ""{item.Name}"" adjusted to {Fmt.Qty(result, item.Unit)}."
             DialogResult = True
         Catch ex As InputValidationException

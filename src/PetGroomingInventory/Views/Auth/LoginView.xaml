@@ -46,7 +46,7 @@
                 </StackPanel>
                 <TextBlock x:Name="RegisterClosedText" Style="{StaticResource MutedText}" TextAlignment="Center" Margin="0,20,0,0"
                            Visibility="Collapsed"
-                           Text="Need another account? Ask an existing Admin to add you from their Profile page."/>
+                           Text="Registration is closed because an Admin account already exists."/>
             </StackPanel>
         </Border>
     </ScrollViewer>

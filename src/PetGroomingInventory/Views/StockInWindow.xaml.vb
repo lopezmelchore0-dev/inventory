@@ -16,6 +16,7 @@
         _errors = New FormErrors(GeneralError)
         _errors.Register("item", ItemError, ItemBox)
         _errors.Register("quantity", QuantityError, QuantityBox)
+        _errors.Register("unit", UnitError, UnitBox)
         _errors.Register("date", DateError, ReceivedDatePicker)
         _errors.Register("supplier", SupplierError, SupplierBox)
         _errors.Register("note", NoteError, NoteBox)
@@ -46,7 +47,7 @@
 
     Private Sub ItemBox_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
         Dim item = SelectedItem
-        UnitSuffix.Text = If(item?.UnitText, "")
+        StockUnitField.Refresh(UnitBox, UnitError, item, QuantityBox.Text)
         If item Is Nothing Then
             CurrentPanel.Visibility = Visibility.Collapsed
         Else
@@ -60,6 +61,7 @@
     End Sub
 
     Private Sub QuantityBox_TextChanged(sender As Object, e As TextChangedEventArgs)
+        StockUnitField.Refresh(UnitBox, UnitError, SelectedItem, QuantityBox.Text)
         UpdatePreview()
     End Sub
 
@@ -78,7 +80,12 @@
         _errors.Clear()
         Dim errors As New Dictionary(Of String, String)
         Dim item = SelectedItem
-        If item Is Nothing Then errors("item") = "Select the item you received."
+        If item Is Nothing Then
+            errors("item") = "Select the item you received."
+        Else
+            Dim unitError = StockService.CheckUnit(item.Unit, item.Unit)
+            If unitError IsNot Nothing Then errors("unit") = unitError
+        End If
 
         Dim qty As Decimal
         If String.IsNullOrWhiteSpace(QuantityBox.Text) Then
@@ -100,7 +107,8 @@
 
         Dim supplierId = CInt(If(SupplierBox.SelectedValue, 0))
         Try
-            StockService.StockIn(item.Id, qty, ReceivedDatePicker.SelectedDate.Value, If(supplierId > 0, supplierId, CType(Nothing, Integer?)), NoteBox.Text)
+            StockService.StockIn(item.Id, qty, ReceivedDatePicker.SelectedDate.Value, If(supplierId > 0, supplierId, CType(Nothing, Integer?)), NoteBox.Text,
+                                 expectedUnit:=item.Unit)
             ResultMessage = $"Received {Fmt.Qty(qty, item.Unit)} of ""{item.Name}"". New stock: {Fmt.Qty(item.Quantity + qty, item.Unit)}."
             DialogResult = True
         Catch ex As InputValidationException

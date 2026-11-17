@@ -156,7 +156,7 @@ Public NotInheritable Class HelpContent
                     New HelpFaq("What happens when I restore a backup?",
                         "Restoring replaces ALL current data with the backup. The file is checked first, and a safety copy of your current data is saved automatically before anything is replaced."),
                     New HelpFaq("How do I update my account?",
-                        "My Profile: update your details and security question, change your password or add another Admin."),
+                        "My Profile: update your details and security question, or change your password."),
                     New HelpFaq("I forgot my password. What should I do?",
                         "Use ""Forgot Password?"" on the Login screen and answer your security question."),
                     New HelpFaq("PawStock says it can't connect to the database.",

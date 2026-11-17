@@ -65,13 +65,6 @@
                                 <TextBlock Text="Change Password" Margin="10,0,0,0"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="AddAdminButton" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Stretch" Margin="0,10,0,0"
-                                Click="AddAdmin_Click" AutomationProperties.Name="Add Admin Account">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Style="{StaticResource IconText}" Text="&#xE8FA;"/>
-                                <TextBlock Text="Add Admin Account" Margin="10,0,0,0"/>
-                            </StackPanel>
-                        </Button>
                     </StackPanel>
                 </Border>
             </StackPanel>

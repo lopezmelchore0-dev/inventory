@@ -31,7 +31,7 @@ Public NotInheritable Class AuthService
     Public Const InvalidCredentialsMessage As String = "Invalid username or password."
     Public Const NotVerifiedMessage As String = "The information provided could not be verified."
     Public Const RegistrationClosedMessage As String =
-        "An Admin account already exists. Ask an existing Admin to create your account from their Profile page."
+        "An Admin account already exists. Please log in with that account."
     Private Const RecoveryTokenMinutes As Integer = 10
 
     Private Class RecoveryTicket

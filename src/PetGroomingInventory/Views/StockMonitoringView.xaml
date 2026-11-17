@@ -152,6 +152,8 @@
                                 <DataGridTextColumn Header="Type" Width="0.9*" MinWidth="100" Binding="{Binding TypeLabel, Mode=OneWay}" ElementStyle="{StaticResource CellText}"/>
                                 <DataGridTextColumn Header="Qty Received" Width="0.9*" MinWidth="90" SortMemberPath="QtyChange"
                                                     Binding="{Binding ChangeText, Mode=OneWay}" ElementStyle="{StaticResource CellText}"/>
+                                <DataGridTextColumn Header="Unit" Width="0.6*" MinWidth="70" SortMemberPath="Unit"
+                                                    Binding="{Binding UnitText, Mode=OneWay}" ElementStyle="{StaticResource CellText}"/>
                                 <DataGridTextColumn Header="Stock" Width="0.9*" MinWidth="90" Binding="{Binding BeforeAfterText, Mode=OneWay}" ElementStyle="{StaticResource CellText}"/>
                                 <DataGridTextColumn Header="Supplier" Width="1.4*" MinWidth="120" Binding="{Binding SupplierText, Mode=OneWay}" ElementStyle="{StaticResource CellText}"/>
                                 <DataGridTextColumn Header="Note" Width="1.5*" MinWidth="110" Binding="{Binding NoteText, Mode=OneWay}" ElementStyle="{StaticResource CellText}"/>
@@ -174,6 +176,8 @@
                                 <DataGridTextColumn Header="Item" Width="1.8*" MinWidth="150" Binding="{Binding ItemName}" ElementStyle="{StaticResource CellText}"/>
                                 <DataGridTextColumn Header="Change" Width="0.8*" MinWidth="80" SortMemberPath="QtyChange"
                                                     Binding="{Binding ChangeText, Mode=OneWay}" ElementStyle="{StaticResource CellText}"/>
+                                <DataGridTextColumn Header="Unit" Width="0.6*" MinWidth="70" SortMemberPath="Unit"
+                                                    Binding="{Binding UnitText, Mode=OneWay}" ElementStyle="{StaticResource CellText}"/>
                                 <DataGridTextColumn Header="Stock" Width="0.9*" MinWidth="90" Binding="{Binding BeforeAfterText, Mode=OneWay}" ElementStyle="{StaticResource CellText}"/>
                                 <DataGridTextColumn Header="Reason" Width="1.4*" MinWidth="130" Binding="{Binding ReasonText, Mode=OneWay}" ElementStyle="{StaticResource CellText}"/>
                                 <DataGridTextColumn Header="Note" Width="1.6*" MinWidth="120" Binding="{Binding NoteText, Mode=OneWay}" ElementStyle="{StaticResource CellText}"/>

@@ -84,8 +84,4 @@ Class ProfileView
     Private Sub ChangePassword_Click(sender As Object, e As RoutedEventArgs)
         MainWindow.Instance?.NavigateTo(PageKey.ChangePassword)
     End Sub
-
-    Private Sub AddAdmin_Click(sender As Object, e As RoutedEventArgs)
-        MainWindow.Instance?.NavigateTo(PageKey.AddAdmin)
-    End Sub
 End Class

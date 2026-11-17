@@ -12,7 +12,6 @@ Public Enum PageKey
     Settings
     Profile
     ChangePassword
-    AddAdmin
     Help
 End Enum
 
@@ -116,7 +115,7 @@ Class MainWindow
 
         Dim target = If(screen, If(hasAdmin, AuthScreen.Login, AuthScreen.Register))
         If target = AuthScreen.Register AndAlso hasAdmin Then
-            ' First-run registration only; further Admins are added from Profile.
+            ' First-run registration only.
             target = AuthScreen.Login
             notice = AuthService.RegistrationClosedMessage
         End If
@@ -182,8 +181,7 @@ Class MainWindow
         End If
 
         Dim page As PageBase = Nothing
-        ' Add Admin always starts with an empty form.
-        If key = PageKey.AddAdmin OrElse Not _pages.TryGetValue(key, page) Then
+        If Not _pages.TryGetValue(key, page) Then
             page = CreatePage(key)
             _pages(key) = page
         End If
@@ -219,7 +217,6 @@ Class MainWindow
             Case PageKey.Settings : Return New SettingsView()
             Case PageKey.Profile : Return New ProfileView()
             Case PageKey.ChangePassword : Return New ChangePasswordView()
-            Case PageKey.AddAdmin : Return New PageBase With {.Content = New RegisterView(addedByAdmin:=True)}
             Case PageKey.Help : Return New HelpView()
             Case Else : Return New DashboardView()
         End Select
@@ -235,7 +232,6 @@ Class MainWindow
             Case PageKey.Settings : Return ("Settings", "Stock rules, categories and units, backups and sample data.")
             Case PageKey.Profile : Return ("Admin Profile", "Your account details, security question and password.")
             Case PageKey.ChangePassword : Return ("Change Password", "Keep your account secure with a strong password.")
-            Case PageKey.AddAdmin : Return ("Add Admin", "Create another Admin account for this shop.")
             Case PageKey.Help : Return ("Help & Support", "Quick answers and step-by-step guides for using PawStock.")
             Case Else : Return ("Dashboard", "Welcome back! Here's your shop's inventory at a glance.")
         End Select

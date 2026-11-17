@@ -94,6 +94,39 @@ Public Class MeasurementUnitTests
         Dim txn As New StockTransaction With {.QtyChange = 3D, .QtyBefore = 12D, .QtyAfter = 15D, .Unit = "pcs"}
         Assert.Equal("+3 pcs", txn.ChangeText)
         Assert.Equal("12 → 15 pcs", txn.BeforeAfterText)
+        Assert.Equal("pcs", txn.UnitText)
+        Assert.Equal("boxes", New StockTransaction With {.QtyChange = -2D, .Unit = "box"}.UnitText)
+        Assert.Equal("bundle", New StockTransaction With {.QtyChange = 1D, .Unit = "bundle"}.UnitText)
+        Assert.Equal("—", New StockTransaction With {.QtyChange = 5D}.UnitText)
+    End Sub
+
+    ' ===================== Stock changes use the registered unit =====================
+
+    <Theory>
+    <InlineData("bundle", "bundle")>
+    <InlineData("bundle", "Per Bundle")>
+    <InlineData("box", "per box")>
+    <InlineData("ml", "Milliliters (ml)")>
+    <InlineData("sachet", "sachet")>
+    Public Sub CheckUnit_AcceptsTheItemsRegisteredUnit(registered As String, expected As String)
+        Assert.Null(StockService.CheckUnit(registered, expected))
+    End Sub
+
+    <Theory>
+    <InlineData("box", "bundle")>
+    <InlineData("box", Nothing)>
+    <InlineData("ml", "L")>
+    <InlineData("sachet", "Sachet")>
+    Public Sub CheckUnit_RejectsADifferentUnit(registered As String, expected As String)
+        Assert.Contains("unit was changed to", StockService.CheckUnit(registered, expected))
+    End Sub
+
+    <Theory>
+    <InlineData(Nothing)>
+    <InlineData("")>
+    <InlineData("   ")>
+    Public Sub CheckUnit_RejectsItemsWithoutAUnit(registered As String)
+        Assert.Contains("has no unit yet", StockService.CheckUnit(registered, registered))
     End Sub
 
     <Fact>

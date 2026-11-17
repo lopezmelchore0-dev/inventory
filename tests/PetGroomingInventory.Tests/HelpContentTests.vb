@@ -42,7 +42,6 @@ Public Class HelpContentTests
     <InlineData("Stock Monitoring lists items that need restocking and items that are expired or expiring soon")>
     <InlineData("Print it or export it to PDF or Excel")>
     <InlineData("Settings → Backup & Restore")>
-    <InlineData("add another Admin")>
     <InlineData("""Forgot Password?"" on the Login screen")>
     <InlineData("start MySQL in the XAMPP Control Panel")>
     Public Sub Guide_KeepsEveryTipFromTheOldHelpDialog(tip As String)

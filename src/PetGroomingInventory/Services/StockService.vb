@@ -56,7 +56,24 @@ Public NotInheritable Class StockService
         Return errors
     End Function
 
-    Public Shared Sub StockIn(itemId As Integer, quantity As Decimal, receivedDate As Date, supplierId As Integer?, note As String)
+    ''' <summary>
+    ''' Checks that a stock change is recorded in the item's registered unit. <paramref name="expectedUnit"/> is the unit
+    ''' the user saw when entering the quantity. Items without a unit cannot take stock changes until one is set.
+    ''' Returns an error message, or Nothing.
+    ''' </summary>
+    Public Shared Function CheckUnit(registeredUnit As String, expectedUnit As String) As String
+        If String.IsNullOrWhiteSpace(registeredUnit) Then
+            Return "This item has no unit yet. Set its unit in Inventory › Edit item before recording stock."
+        End If
+        If Not String.Equals(MeasurementUnits.Normalize(expectedUnit), registeredUnit.Trim(), StringComparison.Ordinal) Then
+            Return $"This item's unit was changed to ""{MeasurementUnits.Display(registeredUnit, 2D)}"" after this form was opened. " &
+                   "Close and reopen the form, then check the quantity."
+        End If
+        Return Nothing
+    End Function
+
+    Public Shared Sub StockIn(itemId As Integer, quantity As Decimal, receivedDate As Date, supplierId As Integer?, note As String,
+                              expectedUnit As String)
         Dim errors As New Dictionary(Of String, String)
         If itemId <= 0 Then errors("item") = "Select the item you received."
         Dim qtyError = InputValidator.CheckAmount(quantity, "Quantity received", allowZero:=False)
@@ -71,9 +88,12 @@ Public NotInheritable Class StockService
 
         Using conn = Db.Open()
             Using tx = conn.BeginTransaction()
-                Dim item = ItemRepository.GetById(conn, tx, itemId)
+                ' Lock the row first so the unit read below is the current one.
                 Dim current = ItemRepository.LockQuantity(conn, tx, itemId)
+                Dim item = ItemRepository.GetById(conn, tx, itemId)
                 If item Is Nothing OrElse Not current.HasValue Then Throw New InputValidationException("item", "This item no longer exists.")
+                Dim unitError = CheckUnit(item.Unit, expectedUnit)
+                If unitError IsNot Nothing Then Throw New InputValidationException("unit", unitError)
                 Dim wholeError = InputValidator.CheckWholeForUnit(quantity, item.Unit, "Quantity received")
                 If wholeError IsNot Nothing Then Throw New InputValidationException("quantity", wholeError)
 
@@ -117,15 +137,19 @@ Public NotInheritable Class StockService
     End Sub
 
     ''' <summary>Applies an adjustment and returns the new quantity.</summary>
-    Public Shared Function Adjust(itemId As Integer, mode As AdjustmentMode, amount As Decimal, reason As String, note As String) As Decimal
+    Public Shared Function Adjust(itemId As Integer, mode As AdjustmentMode, amount As Decimal, reason As String, note As String,
+                                  expectedUnit As String) As Decimal
         If itemId <= 0 Then Throw New InputValidationException("item", "Select the item to adjust.")
         Dim newQty As Decimal
 
         Using conn = Db.Open()
             Using tx = conn.BeginTransaction()
-                Dim item = ItemRepository.GetById(conn, tx, itemId)
+                ' Lock the row first so the unit read below is the current one.
                 Dim current = ItemRepository.LockQuantity(conn, tx, itemId)
+                Dim item = ItemRepository.GetById(conn, tx, itemId)
                 If item Is Nothing OrElse Not current.HasValue Then Throw New InputValidationException("item", "This item no longer exists.")
+                Dim unitError = CheckUnit(item.Unit, expectedUnit)
+                If unitError IsNot Nothing Then Throw New InputValidationException("unit", unitError)
 
                 Dim errors = ValidateAdjustment(current.Value, mode, amount, reason, note, item.Unit)
                 If errors.Count > 0 Then Throw New InputValidationException(errors)
