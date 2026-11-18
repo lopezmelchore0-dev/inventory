@@ -56,16 +56,33 @@ Public NotInheritable Class StockService
         Return errors
     End Function
 
+    Public Const NoUnitMessage As String = "This item has no unit yet. Set its unit in Inventory › Edit item before recording stock."
+
+    ''' <summary>
+    ''' Checks the unit chosen in the Unit field of Stock In / Stock Adjustment. It must be the unit the item was registered
+    ''' with in Add / Edit Item, so one item is never counted in two units. Returns an error message, or Nothing.
+    ''' </summary>
+    Public Shared Function CheckSelectedUnit(registeredUnit As String, selectedText As String) As String
+        If String.IsNullOrWhiteSpace(registeredUnit) Then Return NoUnitMessage
+        Dim registered = MeasurementUnits.LabelFor(registeredUnit)
+        If MeasurementUnits.Normalize(selectedText) Is Nothing Then
+            Return $"Select the unit. This item is registered in ""{registered}""."
+        End If
+        If Not MeasurementUnits.SameUnit(selectedText, registeredUnit) Then
+            Return $"This item is registered in ""{registered}"", so stock must be recorded in {registered}. " &
+                   "To use another unit, change it in Inventory › Edit item first."
+        End If
+        Return Nothing
+    End Function
+
     ''' <summary>
     ''' Checks that a stock change is recorded in the item's registered unit. <paramref name="expectedUnit"/> is the unit
     ''' the user saw when entering the quantity. Items without a unit cannot take stock changes until one is set.
     ''' Returns an error message, or Nothing.
     ''' </summary>
     Public Shared Function CheckUnit(registeredUnit As String, expectedUnit As String) As String
-        If String.IsNullOrWhiteSpace(registeredUnit) Then
-            Return "This item has no unit yet. Set its unit in Inventory › Edit item before recording stock."
-        End If
-        If Not String.Equals(MeasurementUnits.Normalize(expectedUnit), registeredUnit.Trim(), StringComparison.Ordinal) Then
+        If String.IsNullOrWhiteSpace(registeredUnit) Then Return NoUnitMessage
+        If Not MeasurementUnits.SameUnit(expectedUnit, registeredUnit) Then
             Return $"This item's unit was changed to ""{MeasurementUnits.Display(registeredUnit, 2D)}"" after this form was opened. " &
                    "Close and reopen the form, then check the quantity."
         End If

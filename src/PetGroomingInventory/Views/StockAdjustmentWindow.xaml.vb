@@ -3,7 +3,9 @@ Class StockAdjustmentWindow
     Private ReadOnly _errors As FormErrors
     Private ReadOnly _items As List(Of Item)
     Private ReadOnly _settings As AppSettings
+    Private ReadOnly _unit As UnitField
     Private _ready As Boolean
+    Private _unitShownFor As Item
 
     Public ReadOnly Property HasItems As Boolean
         Get
@@ -26,6 +28,7 @@ Class StockAdjustmentWindow
         _items = snapshot.Items
         _settings = snapshot.Settings
         ItemSearchBox.Attach(ItemBox, _items)
+        _unit = UnitField.Attach(UnitBox, UnitHint, AddressOf CheckUnitLive)
         ReasonBox.ItemsSource = StockService.AdjustmentReasons
         If preselectItemId.HasValue Then ItemBox.SelectedValue = preselectItemId.Value
 
@@ -66,13 +69,19 @@ Class StockAdjustmentWindow
         Dim item = SelectedItem
 
         Select Case Mode
-            Case AdjustmentMode.Add : AmountLabel.Text = "Quantity to add *"
-            Case AdjustmentMode.SetCount : AmountLabel.Text = "Counted quantity (actual stock on hand) *"
-            Case Else : AmountLabel.Text = "Quantity to deduct *"
+            Case AdjustmentMode.Add : AmountLabel.Text = "Quantity to add & Unit *"
+            Case AdjustmentMode.SetCount : AmountLabel.Text = "Counted quantity (on hand) & Unit *"
+            Case Else : AmountLabel.Text = "Quantity to deduct & Unit *"
         End Select
         NoteLabel.Text = If(Reason = StockService.OtherReason, "Note * (describe the reason)", "Note (optional)")
 
-        StockUnitField.Refresh(UnitBox, UnitError, item, AmountBox.Text)
+        ' The Unit field starts at the unit the item was registered with in Add / Edit Item (only when the item changes,
+        ' so typing an amount or switching the mode keeps what the user picked).
+        If item IsNot _unitShownFor Then
+            _unitShownFor = item
+            _unit.Show(item?.Unit)
+        End If
+        CheckUnitLive()
         If item Is Nothing Then
             CurrentPanel.Visibility = Visibility.Collapsed
             PreviewPanel.Visibility = Visibility.Collapsed
@@ -99,6 +108,17 @@ Class StockAdjustmentWindow
         End If
     End Sub
 
+    ''' <summary>Flags a unit other than the item's registered one as soon as it is picked. A blank unit is reported on save.</summary>
+    Private Sub CheckUnitLive()
+        If Not _ready Then Return
+        Dim item = SelectedItem
+        Dim problem As String = Nothing
+        If item IsNot Nothing AndAlso (String.IsNullOrWhiteSpace(item.Unit) OrElse _unit.Value IsNot Nothing) Then
+            problem = StockService.CheckSelectedUnit(item.Unit, UnitBox.Text)
+        End If
+        UnitField.ShowProblem(UnitBox, UnitError, problem)
+    End Sub
+
     Private Sub Save_Click(sender As Object, e As RoutedEventArgs)
         _errors.Clear()
         Dim item = SelectedItem
@@ -109,7 +129,7 @@ Class StockAdjustmentWindow
 
         Dim amount As Decimal
         Dim errors As New Dictionary(Of String, String)
-        Dim unitError = StockService.CheckUnit(item.Unit, item.Unit)
+        Dim unitError = StockService.CheckSelectedUnit(item.Unit, UnitBox.Text)
         If unitError IsNot Nothing Then errors("unit") = unitError
         If String.IsNullOrWhiteSpace(AmountBox.Text) Then
             errors("amount") = "Enter a quantity."
@@ -130,7 +150,7 @@ Class StockAdjustmentWindow
         If Not Dialogs.Confirm("Confirm stock adjustment", message, "Apply Adjustment") Then Return
 
         Try
-            Dim result = StockService.Adjust(item.Id, Mode, amount, Reason, NoteBox.Text, expectedUnit:=item.Unit)
+            Dim result = StockService.Adjust(item.Id, Mode, amount, Reason, NoteBox.Text, expectedUnit:=_unit.Value)
             ResultMessage = $"Stock of ""{item.Name}"" adjusted to {Fmt.Qty(result, item.Unit)}."
             DialogResult = True
         Catch ex As InputValidationException

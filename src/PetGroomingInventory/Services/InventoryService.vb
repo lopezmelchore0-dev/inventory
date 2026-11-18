@@ -57,7 +57,7 @@ Public NotInheritable Class InventoryService
         Return MergeSuggestions(DescriptionSuggestions.Defaults, used)
     End Function
 
-    ''' <summary>Suggestions for the Unit box: the predefined units, "Other (Custom Unit)", then custom units already used by items.</summary>
+    ''' <summary>Suggestions for the Unit box: the predefined units, "Others", then custom units already used by items.</summary>
     Public Shared Function GetUnitSuggestions() As List(Of String)
         Dim used As List(Of String)
         Using conn = Db.Open()
@@ -122,7 +122,7 @@ Public NotInheritable Class InventoryService
 
         Dim unit = If(item.Unit, "").Trim()
         If unit.Length = 0 Then
-            errors("unit") = "Select a unit, or choose ""Other (Custom Unit)"" and type your own."
+            errors("unit") = $"Select a unit, or choose ""{MeasurementUnits.OtherLabel}"" and type your own."
         ElseIf unit.Length > MeasurementUnits.MaxLength Then
             errors("unit") = $"Unit must be {MeasurementUnits.MaxLength} characters or fewer."
         End If

@@ -3,7 +3,7 @@ Class ItemEditorWindow
 
     Private ReadOnly _existing As Item
     Private ReadOnly _errors As FormErrors
-    Private _customUnitRequested As Boolean
+    Private ReadOnly _unit As UnitField
 
     Public Property SavedName As String
     Public Property WasChanged As Boolean
@@ -26,8 +26,7 @@ Class ItemEditorWindow
         CategoryBox.ItemsSource = LookupService.GetAll(LookupKind.Category)
         SuggestionBox.Attach(PetTypeBox, InventoryService.GetPetTypeSuggestions(), PetTypes.MaxLength)
         SuggestionBox.Attach(DescriptionBox, InventoryService.GetDescriptionSuggestions(), InventoryService.MaxDescriptionLength)
-        SuggestionBox.Attach(UnitBox, InventoryService.GetUnitSuggestions(), MeasurementUnits.MaxLength)
-        UnitBox.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent, New TextChangedEventHandler(Sub(s, e) UpdateUnitHint()))
+        _unit = UnitField.Attach(UnitBox, UnitHint)
         LoadSuppliers(Nothing)
         UpdateExpirationHint()
 
@@ -45,7 +44,7 @@ Class ItemEditorWindow
             SupplierBox.SelectedValue = existing.SupplierId
             QuantityLabel.Text = "Available Quantity & Unit *"
             ' Items added before units existed have none yet; the form asks for one before saving.
-            UnitBox.Text = MeasurementUnits.LabelFor(existing.Unit)
+            _unit.Show(existing.Unit)
             QuantityBox.Text = Fmt.Qty(existing.Quantity)
             QuantityBox.IsReadOnly = True
             QuantityBox.Focusable = False
@@ -91,21 +90,6 @@ Class ItemEditorWindow
         UpdateExpirationHint()
     End Sub
 
-    ''' <summary>"Other (Custom Unit)" is a prompt, not a unit: clear it so the user types their own.</summary>
-    Private Sub UnitBox_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
-        If Not String.Equals(TryCast(UnitBox.SelectedItem, String), MeasurementUnits.OtherLabel, StringComparison.Ordinal) Then Return
-        ' The ComboBox writes the picked text after this event, so clear it once that has happened.
-        Dispatcher.BeginInvoke(
-            Sub()
-                UnitBox.SelectedIndex = -1
-                UnitBox.Text = ""
-                UnitBox.IsDropDownOpen = False
-                UnitBox.Focus()
-                _customUnitRequested = True
-                UpdateUnitHint()
-            End Sub, Threading.DispatcherPriority.Background)
-    End Sub
-
     ''' <summary>"Other (Custom Pet Type)" is a prompt, not a pet type: clear it so the user types their own.</summary>
     Private Sub PetTypeBox_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
         If Not String.Equals(TryCast(PetTypeBox.SelectedItem, String), PetTypes.OtherLabel, StringComparison.Ordinal) Then Return
@@ -117,18 +101,6 @@ Class ItemEditorWindow
                 PetTypeBox.IsDropDownOpen = False
                 PetTypeBox.Focus()
             End Sub, Threading.DispatcherPriority.Background)
-    End Sub
-
-    Private Sub UpdateUnitHint()
-        Dim unit = MeasurementUnits.Normalize(UnitBox.Text)
-        If unit Is Nothing AndAlso _customUnitRequested Then
-            UnitHint.Text = "Type the unit, e.g. sachet, can, roll or pack."
-        ElseIf MeasurementUnits.IsCountable(unit) Then
-            UnitHint.Text = $"Counted in whole {MeasurementUnits.Display(unit, 2D)}: stock in and adjustments accept whole numbers only."
-        Else
-            UnitHint.Text = ""
-        End If
-        UnitHint.Visibility = If(UnitHint.Text.Length > 0, Visibility.Visible, Visibility.Collapsed)
     End Sub
 
     ' Quantity and price accept numbers only: digits, a decimal point and thousands commas.
@@ -173,7 +145,7 @@ Class ItemEditorWindow
             .PetType = PetTypes.Normalize(PetTypeBox.Text),
             .SupplierId = SelectedId(SupplierBox),
             .Quantity = quantity,
-            .Unit = MeasurementUnits.Normalize(UnitBox.Text),
+            .Unit = _unit.Value,
             .RetailPrice = price,
             .ExpirationDate = ExpirationPicker.SelectedDate?.Date,
             .Description = DescriptionBox.Text.Trim(),

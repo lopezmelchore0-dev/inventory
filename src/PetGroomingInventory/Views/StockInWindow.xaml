@@ -59,25 +59,20 @@
             </Border>
 
             <StackPanel Grid.Row="2" Margin="0,0,0,14">
+                <TextBlock Text="Quantity Received &amp; Unit *" Style="{StaticResource LabelText}" TextTrimming="CharacterEllipsis"/>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="10"/>
-                        <ColumnDefinition Width="110"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock Text="Quantity Received *" Style="{StaticResource LabelText}"/>
-                        <TextBox x:Name="QuantityBox" Tag="e.g. 24" MaxLength="12" TextChanged="QuantityBox_TextChanged"/>
-                    </StackPanel>
-                    <!-- The selected item's registered unit: read-only, quantities are always entered in it -->
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Text="Unit" Style="{StaticResource LabelText}"/>
-                        <TextBox x:Name="UnitBox" IsReadOnly="True" Focusable="False" IsTabStop="False" FontWeight="SemiBold"
-                                 Background="{StaticResource SurfaceAltBrush}" Foreground="{StaticResource TextSecondaryBrush}"/>
-                    </StackPanel>
+                    <TextBox x:Name="QuantityBox" Tag="e.g. 24" MaxLength="12" TextChanged="QuantityBox_TextChanged"/>
+                    <!-- Same Unit field as Add Item (UnitField). Filled with the selected item's unit; it must match it. -->
+                    <ComboBox x:Name="UnitBox" Grid.Column="1" Width="158" Margin="8,0,0,0" Style="{StaticResource EditableComboBox}"
+                              Tag="Unit" ToolTip="How this item is counted, e.g. Pieces, Bottle, Pack. Type to search, or choose Others and type your own unit."/>
                 </Grid>
                 <TextBlock x:Name="QuantityError" Style="{StaticResource ErrorText}"/>
                 <TextBlock x:Name="UnitError" Style="{StaticResource ErrorText}"/>
+                <TextBlock x:Name="UnitHint" Style="{StaticResource MutedText}" FontSize="11.5" Margin="2,5,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="2" Margin="0,0,0,14">
                 <TextBlock Text="Date Received *" Style="{StaticResource LabelText}"/>

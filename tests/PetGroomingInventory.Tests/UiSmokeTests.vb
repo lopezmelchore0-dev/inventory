@@ -118,13 +118,14 @@ Public Class UiSmokeTests
         Next
         Assert.True(DirectCast(dialogs(4), StockInWindow).HasItems)
 
-        ' The read-only Unit field shows the preselected item's registered unit (nothing typed yet: plural form).
-        Dim expectedUnit = If(String.IsNullOrWhiteSpace(item.Unit), StockUnitField.NoUnitText, MeasurementUnits.Display(item.Unit, 2D))
+        ' The Unit field starts at the preselected item's registered unit, shown as its dropdown label.
+        Dim expectedUnit = MeasurementUnits.LabelFor(item.Unit)
         Assert.Equal("", DirectCast(dialogs(4), StockInWindow).UnitBox.Text)
         Assert.Equal(expectedUnit, DirectCast(dialogs(5), StockInWindow).UnitBox.Text)
         Assert.Equal(expectedUnit, DirectCast(dialogs(6), StockAdjustmentWindow).UnitBox.Text)
-        Assert.True(DirectCast(dialogs(5), StockInWindow).UnitBox.IsReadOnly)
+        Assert.Equal(expectedUnit, DirectCast(dialogs(1), ItemEditorWindow).UnitBox.Text)
 
+        CheckUnitFields()
         CheckDescriptionBox()
         CheckItemSearchBox()
 
@@ -175,6 +176,85 @@ Public Class UiSmokeTests
         Assert.Equal(itemCount, CInt(byCategory.Tables.Single().Totals(1)))
         Dim movement = ReportService.Generate(New ReportCriteria With {.Type = ReportType.Movement, .FromDate = bounds.Earliest, .ToDate = bounds.Latest})
         Assert.False(movement.IsEmpty)
+    End Sub
+
+    ''' <summary>
+    ''' Add Item, Stock In and Stock Adjustment share one Unit field: the same editable dropdown, options, "Others" prompt
+    ''' and hint. In the stock forms it starts at the item's registered unit and flags any other unit at once.
+    ''' Built with layout only: no window is shown or focused.
+    ''' </summary>
+    Private Shared Sub CheckUnitFields()
+        Dim pump = Sub() Dispatcher.CurrentDispatcher.Invoke(Sub() Exit Sub, DispatcherPriority.Background)
+        Dim item = InventoryService.GetItems().First(Function(i) MeasurementUnits.IsPredefined(i.Unit))
+        Dim registered = MeasurementUnits.LabelFor(item.Unit)
+        Dim otherUnit = MeasurementUnits.Predefined.First(Function(u) u.Value <> item.Unit).Label
+
+        Dim add As New ItemEditorWindow(Nothing)
+        Dim stockIn As New StockInWindow(item.Id)
+        Dim adjust As New StockAdjustmentWindow(item.Id)
+        For Each w As Window In New Window() {add, stockIn, adjust}
+            Layout(w)
+        Next
+        Dim fields = {(Box:=add.UnitBox, Hint:=add.UnitHint, [Error]:=add.UnitError),
+                      (Box:=stockIn.UnitBox, Hint:=stockIn.UnitHint, [Error]:=stockIn.UnitError),
+                      (Box:=adjust.UnitBox, Hint:=adjust.UnitHint, [Error]:=adjust.UnitError)}
+        Dim options = Function(c As ComboBox) c.Items.Cast(Of String)().ToList()
+
+        ' Identical design and options in all three forms, starting with the 17 required entries ("Others" last).
+        Dim reference = options(add.UnitBox)
+        Assert.Equal(MeasurementUnits.Labels, reference.Take(17))
+        Assert.Equal("Others", reference(16))
+        For Each f In fields
+            Assert.True(f.Box.IsEditable)
+            Assert.Same(add.UnitBox.Style, f.Box.Style)
+            Assert.Equal(add.UnitBox.Width, f.Box.Width)
+            Assert.Equal(reference, options(f.Box))
+            Assert.Equal(MeasurementUnits.MaxLength, DirectCast(f.Box.Template.FindName("PART_EditableTextBox", f.Box), TextBox).MaxLength)
+        Next
+
+        ' Add Item starts blank; the stock forms start at the item's registered unit with no error.
+        Assert.Equal("", add.UnitBox.Text)
+        Assert.Equal(registered, stockIn.UnitBox.Text)
+        Assert.Equal(registered, adjust.UnitBox.Text)
+        Assert.Equal(Visibility.Collapsed, stockIn.UnitError.Visibility)
+
+        ' "Others" clears the box and asks for a custom unit, in every form.
+        For Each f In fields
+            f.Box.SelectedItem = MeasurementUnits.OtherLabel
+            pump()
+            Assert.Equal("", f.Box.Text)
+            Assert.Equal(UnitField.CustomUnitPrompt, f.Hint.Text)
+            Assert.Equal(Visibility.Collapsed, f.Error.Visibility)   ' a blank unit is only reported on save
+        Next
+
+        ' A counted unit shows the whole-number hint, in every form.
+        For Each f In fields
+            f.Box.Text = "Bottle"
+            Assert.Equal("Counted in whole bottles: stock in and adjustments accept whole numbers only.", f.Hint.Text)
+        Next
+
+        ' The stock forms flag any unit other than the item's registered one, and accept it again once it is restored.
+        For Each f In fields.Skip(1)
+            f.Box.Text = otherUnit
+            Assert.Equal(Visibility.Visible, f.Error.Visibility)
+            Assert.Contains($"registered in ""{registered}""", f.Error.Text)
+            f.Box.Text = registered
+            Assert.Equal(Visibility.Collapsed, f.Error.Visibility)
+        Next
+
+        ' Switching the adjustment type or typing an amount keeps the chosen unit.
+        adjust.UnitBox.Text = otherUnit
+        adjust.ModeAdd.IsChecked = True
+        adjust.AmountBox.Text = "2"
+        Assert.Equal(otherUnit, adjust.UnitBox.Text)
+
+        ' Choosing another item resets the field to that item's unit.
+        Dim second = InventoryService.GetItems().First(Function(i) i.Id <> item.Id AndAlso MeasurementUnits.IsPredefined(i.Unit))
+        adjust.ItemBox.SelectedValue = second.Id
+        Assert.Equal(MeasurementUnits.LabelFor(second.Unit), adjust.UnitBox.Text)
+        Assert.Equal(Visibility.Collapsed, adjust.UnitError.Visibility)
+        stockIn.ItemBox.SelectedValue = second.Id
+        Assert.Equal(MeasurementUnits.LabelFor(second.Unit), stockIn.UnitBox.Text)
     End Sub
 
     ''' <summary>The Description field is an editable dropdown: suggestions open on focus, narrow as the user types, and any text is kept.</summary>

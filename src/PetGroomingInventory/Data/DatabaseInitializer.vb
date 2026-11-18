@@ -27,6 +27,7 @@ Public NotInheritable Class DatabaseInitializer
             UpgradeItemColumns(conn)
             Using tx = conn.BeginTransaction()
                 MigrateLegacyCategories(conn, tx)
+                NormalizeUnitSpellings(conn, tx)
                 tx.Commit()
             End Using
         End Using
@@ -38,6 +39,28 @@ Public NotInheritable Class DatabaseInitializer
             Db.Execute(conn, tx, statement)
         Next
         MigrateLegacyCategories(conn, tx)
+        NormalizeUnitSpellings(conn, tx)
+    End Sub
+
+    ''' <summary>
+    ''' Stores each dropdown unit under one spelling on items and stock records, so the same unit is never listed twice
+    ''' (e.g. a custom "Sachet" or "bottles" typed before they were in the dropdown becomes "sachet" / "bottle").
+    ''' Custom units are left as they are. Runs on every start-up and after a restore; does nothing once tidied.
+    ''' </summary>
+    Private Shared Sub NormalizeUnitSpellings(conn As MySqlConnection, tx As MySqlTransaction)
+        For Each table In {"items", "stock_transactions"}
+            ' Compared byte-for-byte: the column's default collation treats "Sachet" and "sachet" as equal.
+            Dim saved = Db.Query(conn, tx,
+                $"SELECT DISTINCT CONVERT(unit USING utf8mb4) COLLATE utf8mb4_bin AS unit FROM {table} WHERE unit IS NOT NULL",
+                Function(r) Db.GetString(r, "unit"))
+            For Each spelling In saved
+                Dim canonical = MeasurementUnits.CanonicalFor(spelling)
+                If canonical Is Nothing Then Continue For
+                Db.Execute(conn, tx,
+                    $"UPDATE {table} SET unit = @canonical WHERE CONVERT(unit USING utf8mb4) COLLATE utf8mb4_bin = @spelling",
+                    Db.P("@canonical", canonical), Db.P("@spelling", spelling))
+            Next
+        Next
     End Sub
 
     ''' <summary>

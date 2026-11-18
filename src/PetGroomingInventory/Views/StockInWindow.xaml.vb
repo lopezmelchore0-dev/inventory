@@ -2,6 +2,7 @@
 
     Private ReadOnly _errors As FormErrors
     Private ReadOnly _items As List(Of Item)
+    Private ReadOnly _unit As UnitField
 
     Public ReadOnly Property HasItems As Boolean
         Get
@@ -23,6 +24,7 @@
 
         _items = InventoryService.GetItems()
         ItemSearchBox.Attach(ItemBox, _items)
+        _unit = UnitField.Attach(UnitBox, UnitHint, AddressOf CheckUnitLive)
 
         ' First entry lets the user record stock without a supplier (e.g. a transfer or donation).
         Dim suppliers As New List(Of Supplier) From {New Supplier With {.Id = 0, .Name = "— Not specified —"}}
@@ -47,7 +49,9 @@
 
     Private Sub ItemBox_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
         Dim item = SelectedItem
-        StockUnitField.Refresh(UnitBox, UnitError, item, QuantityBox.Text)
+        ' The Unit field always starts at the unit the item was registered with in Add / Edit Item.
+        _unit?.Show(item?.Unit)
+        CheckUnitLive()
         If item Is Nothing Then
             CurrentPanel.Visibility = Visibility.Collapsed
         Else
@@ -61,8 +65,17 @@
     End Sub
 
     Private Sub QuantityBox_TextChanged(sender As Object, e As TextChangedEventArgs)
-        StockUnitField.Refresh(UnitBox, UnitError, SelectedItem, QuantityBox.Text)
         UpdatePreview()
+    End Sub
+
+    ''' <summary>Flags a unit other than the item's registered one as soon as it is picked. A blank unit is reported on save.</summary>
+    Private Sub CheckUnitLive()
+        Dim item = SelectedItem
+        Dim problem As String = Nothing
+        If item IsNot Nothing AndAlso (String.IsNullOrWhiteSpace(item.Unit) OrElse _unit?.Value IsNot Nothing) Then
+            problem = StockService.CheckSelectedUnit(item.Unit, UnitBox.Text)
+        End If
+        UnitField.ShowProblem(UnitBox, UnitError, problem)
     End Sub
 
     Private Sub UpdatePreview()
@@ -83,7 +96,7 @@
         If item Is Nothing Then
             errors("item") = "Select the item you received."
         Else
-            Dim unitError = StockService.CheckUnit(item.Unit, item.Unit)
+            Dim unitError = StockService.CheckSelectedUnit(item.Unit, UnitBox.Text)
             If unitError IsNot Nothing Then errors("unit") = unitError
         End If
 
@@ -108,7 +121,7 @@
         Dim supplierId = CInt(If(SupplierBox.SelectedValue, 0))
         Try
             StockService.StockIn(item.Id, qty, ReceivedDatePicker.SelectedDate.Value, If(supplierId > 0, supplierId, CType(Nothing, Integer?)), NoteBox.Text,
-                                 expectedUnit:=item.Unit)
+                                 expectedUnit:=_unit.Value)
             ResultMessage = $"Received {Fmt.Qty(qty, item.Unit)} of ""{item.Name}"". New stock: {Fmt.Qty(item.Quantity + qty, item.Unit)}."
             DialogResult = True
         Catch ex As InputValidationException

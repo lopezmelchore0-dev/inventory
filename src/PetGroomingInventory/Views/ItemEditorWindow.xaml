@@ -79,10 +79,9 @@
                     </Grid.ColumnDefinitions>
                     <TextBox x:Name="QuantityBox" Tag="0" MaxLength="12"
                              PreviewTextInput="Amount_PreviewTextInput" DataObject.Pasting="Amount_Pasting"/>
-                    <!-- Unit: pick a predefined unit, search by typing, or type a custom one -->
+                    <!-- Unit: pick a predefined unit, search by typing, or type a custom one (behaviour in UnitField) -->
                     <ComboBox x:Name="UnitBox" Grid.Column="1" Width="158" Margin="8,0,0,0" Style="{StaticResource EditableComboBox}"
-                              Tag="Unit" ToolTip="How this item is counted, e.g. Pieces (pcs), Milliliters (ml). Type to search, or type your own unit."
-                              SelectionChanged="UnitBox_SelectionChanged"/>
+                              Tag="Unit" ToolTip="How this item is counted, e.g. Pieces, Bottle, Pack. Type to search, or choose Others and type your own unit."/>
                 </Grid>
                 <TextBlock x:Name="QuantityError" Style="{StaticResource ErrorText}"/>
                 <TextBlock x:Name="UnitError" Style="{StaticResource ErrorText}"/>

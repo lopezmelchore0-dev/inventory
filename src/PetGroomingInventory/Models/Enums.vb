@@ -150,36 +150,54 @@ End Class
 
 ''' <summary>
 ''' Unit of measure an item is stocked in (items.unit). Predefined units are stored as their short value
-''' (e.g. "pcs"); anything else the user types is kept as a custom unit. Quantities are never converted between units.
+''' (e.g. "pcs", "bottle"); anything else the user types is kept as a custom unit. Quantities are never converted between units.
+''' The same catalogue drives the Unit field of Add / Edit Item, Stock In and Stock Adjustment (see UnitField).
 ''' </summary>
 Public NotInheritable Class MeasurementUnits
     Private Sub New()
     End Sub
 
     Public Const MaxLength As Integer = 40
-    Public Const OtherLabel As String = "Other (Custom Unit)"
+    ''' <summary>Last dropdown entry: a prompt to type a custom unit, never stored.</summary>
+    Public Const OtherLabel As String = "Others"
+    ' The prompt's label in earlier versions, still recognised as "no unit chosen yet".
+    Private Const LegacyOtherLabel As String = "Other (Custom Unit)"
 
-    ''' <summary>Dropdown label and stored value of each predefined unit, in dropdown order.</summary>
-    Public Shared ReadOnly Predefined As (Label As String, Value As String)() = {
-        ("Per Batch", "batch"),
-        ("Per Bundle", "bundle"),
-        ("Per Box", "box"),
-        ("Grams (g)", "g"),
-        ("Milligrams (mg)", "mg"),
-        ("Kilograms (kg)", "kg"),
-        ("Milliliters (ml)", "ml"),
-        ("Liters (L)", "L"),
-        ("Pieces (pcs)", "pcs"),
-        ("Tablets", "tablet"),
-        ("Drops", "drop")
+    ''' <summary>
+    ''' Dropdown label, stored value and plural of each predefined unit, in dropdown order. Whole = counted in whole
+    ''' numbers only (a gallon can be partly used, so it takes decimals).
+    ''' </summary>
+    Public Shared ReadOnly Predefined As (Label As String, Value As String, Plural As String, Whole As Boolean)() = {
+        ("Pieces", "pcs", "pcs", True),
+        ("Bottle", "bottle", "bottles", True),
+        ("Gallon", "gallon", "gallons", False),
+        ("Pack", "pack", "packs", True),
+        ("Box", "box", "boxes", True),
+        ("Set", "set", "sets", True),
+        ("Bundle", "bundle", "bundles", True),
+        ("Bag", "bag", "bags", True),
+        ("Sachet", "sachet", "sachets", True),
+        ("Can", "can", "cans", True),
+        ("Roll", "roll", "rolls", True),
+        ("Pair", "pair", "pairs", True),
+        ("Tub", "tub", "tubs", True),
+        ("Pail", "pail", "pails", True),
+        ("Jar", "jar", "jars", True),
+        ("Tube", "tube", "tubes", True)
     }
 
-    ' Counted units take whole numbers only, and their word is pluralized for quantities other than 1.
-    Private Shared ReadOnly Plurals As New Dictionary(Of String, String)(StringComparer.Ordinal) From {
-        {"batch", "batches"}, {"bundle", "bundles"}, {"box", "boxes"}, {"pcs", "pcs"}, {"tablet", "tablets"}, {"drop", "drops"}
+    ' Other ways of typing a predefined unit, so the same unit is never saved twice under different spellings.
+    Private Shared ReadOnly Aliases As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
+        {"pc", "pcs"}, {"piece", "pcs"}, {"Pieces (pcs)", "pcs"}, {"gal", "gallon"}, {"Per Box", "box"}, {"Per Bundle", "bundle"}
     }
 
-    ''' <summary>Dropdown entries: the predefined labels, then "Other (Custom Unit)".</summary>
+    ' Units offered by earlier versions that are no longer in the dropdown. Items that still use them keep their
+    ' plural and whole-number rule; they are shown like custom units.
+    Private Shared ReadOnly LegacyPlurals As New Dictionary(Of String, String)(StringComparer.Ordinal) From {
+        {"batch", "batches"}, {"tablet", "tablets"}, {"drop", "drops"}
+    }
+
+    ''' <summary>Dropdown entries: the predefined labels, then "Others".</summary>
     Public Shared ReadOnly Property Labels As IEnumerable(Of String)
         Get
             Return Predefined.Select(Function(u) u.Label).Concat({OtherLabel})
@@ -187,38 +205,73 @@ Public NotInheritable Class MeasurementUnits
     End Property
 
     ''' <summary>
-    ''' The value to store for what is in the Unit box: a predefined label or value (any case) becomes its value,
-    ''' other text is kept as a custom unit, and blank or "Other (Custom Unit)" give Nothing (no unit chosen yet).
+    ''' The value to store for what is in the Unit box: a predefined label, value or plural (any case) becomes its value,
+    ''' other text is kept as a custom unit, and blank or "Others" give Nothing (no unit chosen yet).
     ''' </summary>
     Public Shared Function Normalize(text As String) As String
         Dim trimmed = If(text, "").Trim()
-        If trimmed.Length = 0 OrElse String.Equals(trimmed, OtherLabel, StringComparison.OrdinalIgnoreCase) Then Return Nothing
+        If trimmed.Length = 0 OrElse String.Equals(trimmed, OtherLabel, StringComparison.OrdinalIgnoreCase) OrElse
+           String.Equals(trimmed, LegacyOtherLabel, StringComparison.OrdinalIgnoreCase) Then Return Nothing
         For Each u In Predefined
             If String.Equals(trimmed, u.Label, StringComparison.OrdinalIgnoreCase) OrElse
-               String.Equals(trimmed, u.Value, StringComparison.OrdinalIgnoreCase) Then Return u.Value
+               String.Equals(trimmed, u.Value, StringComparison.OrdinalIgnoreCase) OrElse
+               String.Equals(trimmed, u.Plural, StringComparison.OrdinalIgnoreCase) Then Return u.Value
         Next
+        Dim aliased As String = Nothing
+        If Aliases.TryGetValue(trimmed, aliased) Then Return aliased
         Return trimmed
     End Function
 
-    ''' <summary>Text shown in the Unit box for a stored unit: the dropdown label, or the custom text as typed.</summary>
-    Public Shared Function LabelFor(value As String) As String
-        If String.IsNullOrWhiteSpace(value) Then Return ""
-        For Each u In Predefined
-            If u.Value = value Then Return u.Label
-        Next
-        Return value
+    ''' <summary>True when two stored or typed units are the same unit (custom units ignore case).</summary>
+    Public Shared Function SameUnit(a As String, b As String) As Boolean
+        Return String.Equals(Normalize(a), Normalize(b), StringComparison.OrdinalIgnoreCase)
     End Function
 
+    ''' <summary>Text shown in the Unit box for a stored unit: the dropdown label, or the custom text as saved.</summary>
+    Public Shared Function LabelFor(value As String) As String
+        If String.IsNullOrWhiteSpace(value) Then Return ""
+        Dim normalized = Normalize(value)
+        For Each u In Predefined
+            If u.Value = normalized Then Return u.Label
+        Next
+        Return value.Trim()
+    End Function
+
+    ''' <summary>Counted units (pieces, bottles, boxes…) take whole numbers only.</summary>
     Public Shared Function IsCountable(value As String) As Boolean
-        Return value IsNot Nothing AndAlso Plurals.ContainsKey(value)
+        If value Is Nothing Then Return False
+        For Each u In Predefined
+            If u.Value = value Then Return u.Whole
+        Next
+        Return LegacyPlurals.ContainsKey(value)
     End Function
 
     ''' <summary>The unit as shown after a quantity: "box" for 1, "boxes" otherwise. Custom units are shown as typed.</summary>
     Public Shared Function Display(value As String, quantity As Decimal) As String
         If String.IsNullOrWhiteSpace(value) Then Return ""
-        Dim plural As String = Nothing
-        If Math.Abs(quantity) <> 1D AndAlso Plurals.TryGetValue(value, plural) Then Return plural
+        If Math.Abs(quantity) <> 1D Then
+            For Each u In Predefined
+                If u.Value = value Then Return u.Plural
+            Next
+            Dim plural As String = Nothing
+            If LegacyPlurals.TryGetValue(value, plural) Then Return plural
+        End If
         Return value.Trim()
+    End Function
+
+    ''' <summary>True for the stored value of a dropdown unit (e.g. "pcs", "bottle"), exactly as stored.</summary>
+    Public Shared Function IsPredefined(value As String) As Boolean
+        Return Predefined.Any(Function(u) u.Value = value)
+    End Function
+
+    ''' <summary>
+    ''' The stored value a unit saved by an earlier version should have, when it is another spelling of a dropdown unit
+    ''' (e.g. "Sachet" or "bottles" typed as a custom unit); otherwise Nothing (custom units are kept as they are).
+    ''' </summary>
+    Public Shared Function CanonicalFor(saved As String) As String
+        Dim normalized = Normalize(saved)
+        If normalized Is Nothing OrElse Not IsPredefined(normalized) OrElse String.Equals(saved, normalized, StringComparison.Ordinal) Then Return Nothing
+        Return normalized
     End Function
 End Class
 

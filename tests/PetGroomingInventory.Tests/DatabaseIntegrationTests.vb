@@ -444,20 +444,20 @@ Public Class DatabaseIntegrationTests
         Dim newItem = Function(name As String, quantity As Decimal, unit As String) New Item With {
             .Name = name, .CategoryId = categoryId, .PetType = PetTypes.Both, .SupplierId = supplierId, .Quantity = quantity, .Unit = unit, .RetailPrice = 10D}
 
-        ' A dropdown label is stored as its short unit; a custom unit is stored as typed.
-        InventoryService.AddItem(newItem("Gauze Pads", 10D, "Pieces (pcs)"))
-        InventoryService.AddItem(newItem("Coat Spray", 1.5D, "Liters (L)"))
-        InventoryService.AddItem(newItem("Shampoo Sachet", 0D, "sachet"))
+        ' A dropdown label (or its plural) is stored as its short unit; a custom unit is stored as typed.
+        InventoryService.AddItem(newItem("Gauze Pads", 10D, "Pieces"))
+        InventoryService.AddItem(newItem("Coat Spray", 1.5D, "Gallon"))
+        InventoryService.AddItem(newItem("Shampoo Sachet", 0D, "Sachets"))
         Assert.Equal("pcs", FindItem("Gauze Pads").Unit)
         Assert.Equal("10 pcs", FindItem("Gauze Pads").QuantityText)
-        Assert.Equal("L", FindItem("Coat Spray").Unit)
+        Assert.Equal("gallon", FindItem("Coat Spray").Unit)
         Assert.Equal("sachet", FindItem("Shampoo Sachet").Unit)
         Dim suggestions = InventoryService.GetUnitSuggestions()
-        Assert.Contains("sachet", suggestions)
-        Assert.Single(suggestions, Function(s) s = "Pieces (pcs)")
+        Assert.Single(suggestions, Function(s) s = "Sachet")
+        Assert.Single(suggestions, Function(s) s = "Pieces")
 
         ' A unit is required, and counted units take whole numbers.
-        Assert.True(Assert.Throws(Of InputValidationException)(Function() InventoryService.AddItem(newItem("No Unit", 1D, "Other (Custom Unit)"))).Errors.ContainsKey("unit"))
+        Assert.True(Assert.Throws(Of InputValidationException)(Function() InventoryService.AddItem(newItem("No Unit", 1D, "Others"))).Errors.ContainsKey("unit"))
         Assert.True(Assert.Throws(Of InputValidationException)(Function() InventoryService.AddItem(newItem("Half Piece", 2.5D, "pcs"))).Errors.ContainsKey("quantity"))
 
         ' Stock in and adjustments are counted in the item's unit, and every stock record keeps it.
@@ -469,12 +469,12 @@ Public Class DatabaseIntegrationTests
         Assert.True(Assert.Throws(Of InputValidationException)(Function() StockService.Adjust(gauzeId, AdjustmentMode.Deduct, 1.5D, "Damaged", Nothing, "pcs")).Errors.ContainsKey("amount"))
         Assert.Equal(13D, FindItem("Gauze Pads").Quantity)   ' rejected changes leave stock untouched
         Dim sprayId = FindItem("Coat Spray").Id
-        StockService.StockIn(sprayId, 0.75D, Date.Today, Nothing, Nothing, "L")
+        StockService.StockIn(sprayId, 0.75D, Date.Today, Nothing, Nothing, "Gallon")
         Assert.Equal(2.25D, FindItem("Coat Spray").Quantity)
 
         Using conn = Db.Open()
             Assert.Equal(3, Db.Count(conn, Nothing, "SELECT COUNT(*) FROM stock_transactions WHERE item_id = @id AND unit = 'pcs'", Db.P("@id", gauzeId)))
-            Assert.Equal(2, Db.Count(conn, Nothing, "SELECT COUNT(*) FROM stock_transactions WHERE item_id = @id AND unit = 'L'", Db.P("@id", sprayId)))
+            Assert.Equal(2, Db.Count(conn, Nothing, "SELECT COUNT(*) FROM stock_transactions WHERE item_id = @id AND unit = 'gallon'", Db.P("@id", sprayId)))
         End Using
         Assert.Equal("−2 pcs", StockService.GetHistory(adjustments:=True).Single().ChangeText)
         Assert.Contains("Received 5 pcs", ActivityService.Search(Date.Today, Date.Today, ActivityTypes.StockReceived, "Gauze", 10).Single().Description)
@@ -483,14 +483,14 @@ Public Class DatabaseIntegrationTests
         Dim spray = FindItem("Coat Spray")
         spray.Unit = "pcs"
         Assert.True(Assert.Throws(Of InputValidationException)(Function() InventoryService.UpdateItem(spray)).Errors.ContainsKey("unit"))
-        spray.Unit = "Milliliters (ml)"
+        spray.Unit = "ml"   ' a custom unit
         Assert.True(InventoryService.UpdateItem(spray))
         Assert.Equal("ml", FindItem("Coat Spray").Unit)
         Assert.Equal(2.25D, FindItem("Coat Spray").Quantity)
-        Assert.Contains("unit L → ml", ActivityService.GetRecent(1).Single().Description)
+        Assert.Contains("unit gallon → ml", ActivityService.GetRecent(1).Single().Description)
 
         ' Dashboard total is kept per unit.
-        Assert.Equal("2.25 ml · 13 pcs · 0 sachet", InventoryService.LoadSnapshot().Summary.StockByUnit)
+        Assert.Equal("2.25 ml · 13 pcs · 0 sachets", InventoryService.LoadSnapshot().Summary.StockByUnit)
 
         ' Backup → change → restore keeps every unit, including those on stock records.
         Dim folder = IO.Path.Combine(IO.Path.GetTempPath(), "pawstock-tests")
@@ -498,13 +498,13 @@ Public Class DatabaseIntegrationTests
         Dim backupPath = IO.Path.Combine(folder, "units-backup.json")
         BackupService.CreateBackup(backupPath)
         Dim gauze = FindItem("Gauze Pads")
-        gauze.Unit = "Per Box"
+        gauze.Unit = "Box"
         Assert.True(InventoryService.UpdateItem(gauze))
         BackupService.Restore(BackupService.ReadBackup(backupPath))
         Assert.Equal("pcs", FindItem("Gauze Pads").Unit)
         Assert.Equal("ml", FindItem("Coat Spray").Unit)
         Using conn = Db.Open()
-            Assert.Equal(2, Db.Count(conn, Nothing, "SELECT COUNT(*) FROM stock_transactions WHERE item_id = @id AND unit = 'L'", Db.P("@id", sprayId)))
+            Assert.Equal(2, Db.Count(conn, Nothing, "SELECT COUNT(*) FROM stock_transactions WHERE item_id = @id AND unit = 'gallon'", Db.P("@id", sprayId)))
         End Using
 
         ' Items from before units keep a blank unit: editing one asks for a unit, and their older stock records show the item's unit.
@@ -537,7 +537,7 @@ Public Class DatabaseIntegrationTests
         Dim supplierId = SupplierService.Add(New Supplier With {.Name = "Bundle Supplier", .ContactPerson = "Ana", .Phone = "09171234567", .Address = "Aparri"})
         InventoryService.AddItem(New Item With {
             .Name = "Cotton Balls", .CategoryId = LookupId(LookupKind.Category, "Grooming Supplies"), .PetType = PetTypes.Both,
-            .SupplierId = supplierId, .Quantity = 4D, .Unit = "Per Bundle", .RetailPrice = 20D})
+            .SupplierId = supplierId, .Quantity = 4D, .Unit = "Bundle", .RetailPrice = 20D})
         Dim itemId = FindItem("Cotton Balls").Id
         Dim countRecords = Function()
                                Using conn = Db.Open()
@@ -547,7 +547,7 @@ Public Class DatabaseIntegrationTests
 
         ' The registered unit (given as its value or its dropdown label) is accepted and saved on the record.
         StockService.StockIn(itemId, 5D, Date.Today, supplierId, Nothing, "bundle")
-        Assert.Equal(1D, StockService.Adjust(itemId, AdjustmentMode.Deduct, 8D, "Damaged", Nothing, "Per Bundle"))
+        Assert.Equal(1D, StockService.Adjust(itemId, AdjustmentMode.Deduct, 8D, "Damaged", Nothing, "Bundle"))
         Assert.All(StockService.GetHistory(adjustments:=False).Concat(StockService.GetHistory(adjustments:=True)),
                    Sub(t) Assert.Equal("bundle", t.Unit))
         Assert.Equal("−8 bundles", StockService.GetHistory(adjustments:=True).Single().ChangeText)
@@ -555,7 +555,7 @@ Public Class DatabaseIntegrationTests
 
         ' The unit changes after a form was opened with the old one: nothing is recorded in the wrong unit.
         Dim edited = FindItem("Cotton Balls")
-        edited.Unit = "Per Box"
+        edited.Unit = "Box"
         Assert.True(InventoryService.UpdateItem(edited))
         Dim recordsBefore = countRecords()
         Dim stockIn = Assert.Throws(Of InputValidationException)(Sub() StockService.StockIn(itemId, 2D, Date.Today, Nothing, Nothing, "bundle"))
@@ -574,5 +574,41 @@ Public Class DatabaseIntegrationTests
         Assert.True(Assert.Throws(Of InputValidationException)(Function() StockService.Adjust(itemId, AdjustmentMode.Add, 2D, "Count correction", Nothing, Nothing)).Errors.ContainsKey("unit"))
         Assert.Equal(1D, FindItem("Cotton Balls").Quantity)
         Assert.Equal(recordsBefore, countRecords())
+    End Sub
+
+    <IntegrationFact>
+    Public Sub Initialize_StoresEachDropdownUnitUnderOneSpelling_AndKeepsCustomUnits()
+        ResetDatabase()
+        Dim supplierId = SupplierService.Add(New Supplier With {.Name = "Spelling Supplier", .ContactPerson = "Ana", .Phone = "09171234567", .Address = "Aparri"})
+        Dim categoryId = LookupId(LookupKind.Category, "Grooming Supplies")
+        ' Units typed as custom text by earlier versions, before these units were in the dropdown.
+        Dim saved = {("Sachet Shampoo", "Sachet"), ("Lower Sachet", "sachet"), ("Spray Bottles", "bottles"), ("Brush", "Pieces"), ("Ear Drops", "ml"), ("Tray", "Tray")}
+        Using conn = Db.Open()
+            For Each row In saved
+                Dim id = Db.Insert(conn, Nothing,
+                    "INSERT INTO items (name, category_id, pet_type, quantity, unit, retail_price, supplier_id) VALUES (@name, @category, 'Both', 3, @unit, 10, @supplier)",
+                    Db.P("@name", row.Item1), Db.P("@category", categoryId), Db.P("@unit", row.Item2), Db.P("@supplier", supplierId))
+                Db.Execute(conn, Nothing,
+                    "INSERT INTO stock_transactions (item_id, item_name, txn_type, qty_change, qty_before, qty_after, unit, txn_date) VALUES (@id, @name, 'INITIAL', 3, 0, 3, @unit, CURDATE())",
+                    Db.P("@id", id), Db.P("@name", row.Item1), Db.P("@unit", row.Item2))
+            Next
+        End Using
+
+        DatabaseInitializer.Initialize()
+
+        Dim expected = {("Sachet Shampoo", "sachet"), ("Lower Sachet", "sachet"), ("Spray Bottles", "bottle"), ("Brush", "pcs"), ("Ear Drops", "ml"), ("Tray", "Tray")}
+        For Each row In expected
+            Assert.Equal(row.Item2, FindItem(row.Item1).Unit)
+        Next
+        Using conn = Db.Open()
+            Dim units = Db.Query(conn, Nothing, "SELECT CONVERT(unit USING utf8mb4) COLLATE utf8mb4_bin AS unit FROM stock_transactions ORDER BY id", Function(r) Db.GetString(r, "unit"))
+            Assert.Equal(expected.Select(Function(e) e.Item2), units)
+        End Using
+        ' The dropdown lists Sachet once, and a tidied item takes stock changes through the stock forms' Unit field.
+        Assert.Single(InventoryService.GetUnitSuggestions(), Function(s) String.Equals(s, "Sachet", StringComparison.OrdinalIgnoreCase))
+        Dim sachetId = FindItem("Sachet Shampoo").Id
+        Assert.Null(StockService.CheckSelectedUnit(FindItem("Sachet Shampoo").Unit, "Sachet"))
+        StockService.StockIn(sachetId, 2D, Date.Today, Nothing, Nothing, MeasurementUnits.Normalize("Sachet"))
+        Assert.Equal("5 sachets", FindItem("Sachet Shampoo").QuantityText)
     End Sub
 End Class

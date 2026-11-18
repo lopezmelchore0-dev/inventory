@@ -6,22 +6,30 @@ Public Class MeasurementUnitTests
     ' ===================== Catalogue =====================
 
     <Theory>
-    <InlineData("Pieces (pcs)", "pcs")>
-    <InlineData("pieces (PCS)", "pcs")>
+    <InlineData("Pieces", "pcs")>
+    <InlineData("pieces", "pcs")>
     <InlineData("pcs", "pcs")>
-    <InlineData("Per Box", "box")>
-    <InlineData("Per Batch", "batch")>
-    <InlineData("Per Bundle", "bundle")>
-    <InlineData("Grams (g)", "g")>
-    <InlineData("Milligrams (mg)", "mg")>
-    <InlineData("Kilograms (kg)", "kg")>
-    <InlineData("Milliliters (ml)", "ml")>
-    <InlineData("Liters (L)", "L")>
-    <InlineData("l", "L")>
-    <InlineData("Tablets", "tablet")>
-    <InlineData("Drops", "drop")>
-    <InlineData("  sachet  ", "sachet")>
-    <InlineData("Roll", "Roll")>
+    <InlineData("piece", "pcs")>
+    <InlineData("Pieces (pcs)", "pcs")>
+    <InlineData("Bottle", "bottle")>
+    <InlineData("bottles", "bottle")>
+    <InlineData("Gallon", "gallon")>
+    <InlineData("Pack", "pack")>
+    <InlineData("Box", "box")>
+    <InlineData("BOXES", "box")>
+    <InlineData("Set", "set")>
+    <InlineData("Bundle", "bundle")>
+    <InlineData("Bag", "bag")>
+    <InlineData("  Sachet  ", "sachet")>
+    <InlineData("Can", "can")>
+    <InlineData("Roll", "roll")>
+    <InlineData("Pair", "pair")>
+    <InlineData("Tub", "tub")>
+    <InlineData("Pail", "pail")>
+    <InlineData("Jar", "jar")>
+    <InlineData("Tube", "tube")>
+    <InlineData("tray", "tray")>
+    <InlineData("ml", "ml")>
     Public Sub Normalize_MapsLabelsToStoredValues_AndKeepsCustomUnits(typed As String, expected As String)
         Assert.Equal(expected, MeasurementUnits.Normalize(typed))
     End Sub
@@ -30,24 +38,27 @@ Public Class MeasurementUnitTests
     <InlineData(Nothing)>
     <InlineData("")>
     <InlineData("   ")>
+    <InlineData("Others")>
+    <InlineData("others")>
     <InlineData("Other (Custom Unit)")>
-    <InlineData("other (custom unit)")>
-    Public Sub Normalize_BlankOrOtherMeansNoUnitChosen(typed As String)
+    Public Sub Normalize_BlankOrOthersMeansNoUnitChosen(typed As String)
         Assert.Null(MeasurementUnits.Normalize(typed))
     End Sub
 
     <Fact>
-    Public Sub Labels_ListEveryRequiredUnit_WithOtherLast()
+    Public Sub Labels_ListEveryRequiredUnit_WithOthersLast()
         Dim labels = MeasurementUnits.Labels.ToList()
-        Assert.Equal({"Per Batch", "Per Bundle", "Per Box", "Grams (g)", "Milligrams (mg)", "Kilograms (kg)", "Milliliters (ml)",
-                      "Liters (L)", "Pieces (pcs)", "Tablets", "Drops", "Other (Custom Unit)"}, labels)
+        Assert.Equal({"Pieces", "Bottle", "Gallon", "Pack", "Box", "Set", "Bundle", "Bag", "Sachet", "Can", "Roll", "Pair",
+                      "Tub", "Pail", "Jar", "Tube", "Others"}, labels)
     End Sub
 
     <Fact>
     Public Sub LabelFor_ShowsTheDropdownLabel_OrTheCustomText()
-        Assert.Equal("Pieces (pcs)", MeasurementUnits.LabelFor("pcs"))
-        Assert.Equal("Liters (L)", MeasurementUnits.LabelFor("L"))
-        Assert.Equal("sachet", MeasurementUnits.LabelFor("sachet"))
+        Assert.Equal("Pieces", MeasurementUnits.LabelFor("pcs"))
+        Assert.Equal("Bottle", MeasurementUnits.LabelFor("bottle"))
+        Assert.Equal("Sachet", MeasurementUnits.LabelFor("Sachet"))   ' a custom "Sachet" from before it was in the dropdown
+        Assert.Equal("ml", MeasurementUnits.LabelFor("ml"))           ' units no longer in the dropdown are kept as custom units
+        Assert.Equal("tray", MeasurementUnits.LabelFor("tray"))
         Assert.Equal("", MeasurementUnits.LabelFor(Nothing))
         For Each u In MeasurementUnits.Predefined
             Assert.Equal(u.Value, MeasurementUnits.Normalize(MeasurementUnits.LabelFor(u.Value)))   ' edit → save keeps the unit
@@ -55,10 +66,21 @@ Public Class MeasurementUnitTests
     End Sub
 
     <Fact>
+    Public Sub CanonicalFor_TidiesOtherSpellingsOfDropdownUnits_AndKeepsCustomUnits()
+        Assert.Equal("sachet", MeasurementUnits.CanonicalFor("Sachet"))
+        Assert.Equal("bottle", MeasurementUnits.CanonicalFor("bottles"))
+        Assert.Equal("pcs", MeasurementUnits.CanonicalFor("Pieces"))
+        Assert.Null(MeasurementUnits.CanonicalFor("pcs"))      ' already stored correctly
+        Assert.Null(MeasurementUnits.CanonicalFor("ml"))       ' custom / legacy units are left alone
+        Assert.Null(MeasurementUnits.CanonicalFor("Tray"))
+        Assert.Null(MeasurementUnits.CanonicalFor(Nothing))
+    End Sub
+
+    <Fact>
     Public Sub UnitSuggestions_ShowEachUsedUnitOnce()
-        Dim merged = InventoryService.MergeSuggestions(MeasurementUnits.Labels, {"pcs", "sachet", "Sachet", "ml"}.Select(AddressOf MeasurementUnits.LabelFor))
-        Assert.Equal(MeasurementUnits.Labels.Concat({"sachet"}), merged)
-        Assert.Equal({"Grams (g)", "Milligrams (mg)", "Kilograms (kg)"}, merged.Where(Function(s) SuggestionBox.Matches(s, "g")).Take(3))
+        Dim merged = InventoryService.MergeSuggestions(MeasurementUnits.Labels, {"pcs", "sachet", "Sachet", "ml", "tray"}.Select(AddressOf MeasurementUnits.LabelFor))
+        Assert.Equal(MeasurementUnits.Labels.Concat({"ml", "tray"}), merged)
+        Assert.Equal({"Tub", "Tube"}, merged.Where(Function(s) SuggestionBox.Matches(s, "tu")))
     End Sub
 
     ' ===================== Display =====================
@@ -75,7 +97,11 @@ Public Class MeasurementUnitTests
     <InlineData(5, "drop", "5 drops")>
     <InlineData(2.5, "kg", "2.5 kg")>
     <InlineData(1500, "ml", "1,500 ml")>
-    <InlineData(4, "sachet", "4 sachet")>
+    <InlineData(4, "sachet", "4 sachets")>
+    <InlineData(1, "bottle", "1 bottle")>
+    <InlineData(2.5, "gallon", "2.5 gallons")>
+    <InlineData(6, "pair", "6 pairs")>
+    <InlineData(4, "tray", "4 tray")>
     <InlineData(7, Nothing, "7")>
     <InlineData(7, "", "7")>
     Public Sub Qty_ShowsTheUnit_AndOldItemsWithoutOneShowTheNumberOnly(quantity As Double, unit As String, expected As String)
@@ -104,21 +130,34 @@ Public Class MeasurementUnitTests
 
     <Theory>
     <InlineData("bundle", "bundle")>
-    <InlineData("bundle", "Per Bundle")>
-    <InlineData("box", "per box")>
-    <InlineData("ml", "Milliliters (ml)")>
-    <InlineData("sachet", "sachet")>
+    <InlineData("bundle", "Bundle")>
+    <InlineData("box", "box")>
+    <InlineData("pcs", "Pieces")>
+    <InlineData("sachet", "Sachet")>
+    <InlineData("Sachet", "sachet")>   ' a custom "Sachet" saved before it was in the dropdown
+    <InlineData("ml", "ml")>
+    <InlineData("tray", "Tray")>
     Public Sub CheckUnit_AcceptsTheItemsRegisteredUnit(registered As String, expected As String)
         Assert.Null(StockService.CheckUnit(registered, expected))
+        Assert.Null(StockService.CheckSelectedUnit(registered, expected))
     End Sub
 
     <Theory>
     <InlineData("box", "bundle")>
     <InlineData("box", Nothing)>
     <InlineData("ml", "L")>
-    <InlineData("sachet", "Sachet")>
+    <InlineData("bottle", "Gallon")>
     Public Sub CheckUnit_RejectsADifferentUnit(registered As String, expected As String)
         Assert.Contains("unit was changed to", StockService.CheckUnit(registered, expected))
+    End Sub
+
+    <Fact>
+    Public Sub CheckSelectedUnit_AsksForTheItemsRegisteredUnit()
+        Assert.Equal("This item is registered in ""Bottle"", so stock must be recorded in Bottle. To use another unit, change it in Inventory › Edit item first.",
+                     StockService.CheckSelectedUnit("bottle", "Gallon"))
+        Assert.Contains("registered in ""Bottle""", StockService.CheckSelectedUnit("bottle", "tray"))
+        Assert.Equal("Select the unit. This item is registered in ""Pieces"".", StockService.CheckSelectedUnit("pcs", ""))
+        Assert.Equal("Select the unit. This item is registered in ""Pieces"".", StockService.CheckSelectedUnit("pcs", "Others"))
     End Sub
 
     <Theory>
@@ -127,6 +166,7 @@ Public Class MeasurementUnitTests
     <InlineData("   ")>
     Public Sub CheckUnit_RejectsItemsWithoutAUnit(registered As String)
         Assert.Contains("has no unit yet", StockService.CheckUnit(registered, registered))
+        Assert.Contains("has no unit yet", StockService.CheckSelectedUnit(registered, "Pieces"))
     End Sub
 
     <Fact>
@@ -148,10 +188,15 @@ Public Class MeasurementUnitTests
     <InlineData(1.5, "drop", False)>
     <InlineData(1.5, "batch", False)>
     <InlineData(1.5, "bundle", False)>
+    <InlineData(1.5, "bottle", False)>
+    <InlineData(2.5, "sachet", False)>
+    <InlineData(0.5, "pair", False)>
+    <InlineData(1.5, "tube", False)>
     <InlineData(3, "pcs", True)>
+    <InlineData(2.5, "gallon", True)>
     <InlineData(2.5, "kg", True)>
     <InlineData(0.25, "L", True)>
-    <InlineData(2.5, "sachet", True)>
+    <InlineData(2.5, "tray", True)>
     <InlineData(2.5, Nothing, True)>
     Public Sub CountedUnits_TakeWholeNumbersOnly(quantity As Double, unit As String, ok As Boolean)
         Assert.Equal(ok, InputValidator.CheckWholeForUnit(CDec(quantity), unit, "Quantity") Is Nothing)
@@ -163,7 +208,7 @@ Public Class MeasurementUnitTests
         Assert.True(InventoryService.Validate(item).ContainsKey("unit"))
         item.Unit = New String("x"c, MeasurementUnits.MaxLength + 1)
         Assert.True(InventoryService.Validate(item).ContainsKey("unit"))
-        item.Unit = "sachet"
+        item.Unit = "tray"
         Assert.Empty(InventoryService.Validate(item))
 
         item.Unit = "pcs"

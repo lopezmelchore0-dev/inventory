@@ -111,7 +111,8 @@ Public NotInheritable Class HelpContent
                 "Every product you want to track starts with Inventory → Add Item.",
                 {
                     "Go to Inventory → Add Item to register a product.",
-                    "Fill in the required fields: Item Name, Category, Pet Type, Supplier and Retail Price.",
+                    "Fill in the required fields: Item Name, Category, Pet Type, Supplier, Unit and Retail Price.",
+                    "Pick the Unit the item is counted in: Pieces, Bottle, Gallon, Pack, Box, Set, Bundle, Bag, Sachet, Can, Roll, Pair, Tub, Pail, Jar or Tube. Choose Others to type your own.",
                     "Expiration date is optional. Leave it empty for products that don't expire.",
                     "Description is optional. Use it for size, scent or other details, e.g. 500 ml, Lavender.",
                     "Supplier not listed yet? Click New supplier in the form to add one without leaving it.",
@@ -124,6 +125,7 @@ Public NotInheritable Class HelpContent
                     "Record deliveries with Stock In: choose the item, enter the Quantity Received and Date Received, and the supplier when applicable.",
                     "Fix count differences with Stock Adjustment (a reason is required). Choose Add stock, Deduct stock or Set counted quantity.",
                     "Set counted quantity is useful after a physical count: enter the number you counted and PawStock works out the difference.",
+                    "The Unit field is filled in with the unit chosen for the item in Add Item (e.g. Pieces, Bottle, Pack). Stock is always recorded in that unit; to use another one, change it in Inventory › Edit item first.",
                     "Add an optional note, such as a delivery receipt number, to make the history easier to follow.",
                     "Every Stock In and adjustment appears in Stock Monitoring's history tabs and on the Activities page."
                 }),
