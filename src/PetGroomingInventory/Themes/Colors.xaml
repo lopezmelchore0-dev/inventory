@@ -6,27 +6,130 @@
          (The "Lavender*" keys are the light tint slots; their values follow the pink scale.) -->
     <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FDF1F7"/>
     <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="SurfaceAltBrush" Color="#FFF8FB"/>
-    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#FEF0F7"/>
+    <!-- Glass tints: translucent versions of the old solid tints. Over white they look the same as before;
+         over the pink backdrop and glass panels the glow shows through. -->
+    <SolidColorBrush x:Key="SurfaceAltBrush" Color="#B3FFF5FA"/>
+    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#99FDE7F2"/>
     <SolidColorBrush x:Key="PrimaryBrush" Color="#E48ABE"/>
     <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#D978B1"/>
     <SolidColorBrush x:Key="PrimaryDarkBrush" Color="#A9437F"/>
     <SolidColorBrush x:Key="AccentButtonBrush" Color="#CC5F9D"/>
     <SolidColorBrush x:Key="AccentButtonHoverBrush" Color="#B9508D"/>
-    <SolidColorBrush x:Key="LavenderBrush" Color="#FCE4F0"/>
-    <SolidColorBrush x:Key="LavenderHoverBrush" Color="#F8CFE5"/>
-    <SolidColorBrush x:Key="CardBorderBrush" Color="#F8DEEC"/>
-    <SolidColorBrush x:Key="InputBorderBrush" Color="#F3CFE3"/>
+    <SolidColorBrush x:Key="LavenderBrush" Color="#A6F8CFE5"/>
+    <SolidColorBrush x:Key="LavenderHoverBrush" Color="#D9F8CFE5"/>
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#B3F3CFE3"/>
+    <SolidColorBrush x:Key="InputBorderBrush" Color="#CCEDBCD7"/>
     <SolidColorBrush x:Key="InputHoverBorderBrush" Color="#F3B7D9"/>
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="#2E1B28"/>
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="#7A5F70"/>
     <SolidColorBrush x:Key="TextMutedBrush" Color="#A98DA0"/>
     <SolidColorBrush x:Key="NeutralDarkBrush" Color="#4A2E40"/>
     <SolidColorBrush x:Key="NeutralDarkHoverBrush" Color="#36202F"/>
-    <SolidColorBrush x:Key="ToastBrush" Color="#3A2233"/>
+    <!-- Dark glass for toasts and tooltips -->
+    <SolidColorBrush x:Key="ToastBrush" Color="#E63A2233"/>
     <SolidColorBrush x:Key="OverlayBrush" Color="#592E1B28"/>
     <!-- Validation text uses a raspberry tone so red stays reserved for Critical Stock -->
     <SolidColorBrush x:Key="ErrorTextBrush" Color="#B8336A"/>
+
+    <!-- ===== Glass look =====
+         App backdrop: a soft pink gradient with large blurred glows. The glows are radial gradients (not a BlurEffect),
+         and the brush is cached, so it costs almost nothing to draw. It stretches with the window.
+         The Viewbox pins the brush to the 1600x1000 design box: the glows spill past it and are clipped at the edges. -->
+    <DrawingBrush x:Key="AppBackdropBrush" Stretch="Fill" Viewbox="0,0,1600,1000" ViewboxUnits="Absolute"
+                  RenderOptions.CachingHint="Cache">
+        <DrawingBrush.Drawing>
+            <DrawingGroup>
+                <!-- Base gradient: blush pink to a faint lilac -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,1600,1000"/>
+                    </GeometryDrawing.Geometry>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#FDF1F7" Offset="0"/>
+                            <GradientStop Color="#F9E3EF" Offset="0.55"/>
+                            <GradientStop Color="#F4E9F8" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                </GeometryDrawing>
+                <!-- Top-left glow -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="180,120" RadiusX="620" RadiusY="520"/>
+                    </GeometryDrawing.Geometry>
+                    <GeometryDrawing.Brush>
+                        <RadialGradientBrush>
+                            <GradientStop Color="#70F3B7D9" Offset="0"/>
+                            <GradientStop Color="#00F3B7D9" Offset="1"/>
+                        </RadialGradientBrush>
+                    </GeometryDrawing.Brush>
+                </GeometryDrawing>
+                <!-- Top-right glow -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="1420,90" RadiusX="560" RadiusY="460"/>
+                    </GeometryDrawing.Geometry>
+                    <GeometryDrawing.Brush>
+                        <RadialGradientBrush>
+                            <GradientStop Color="#5CEEA2CE" Offset="0"/>
+                            <GradientStop Color="#00EEA2CE" Offset="1"/>
+                        </RadialGradientBrush>
+                    </GeometryDrawing.Brush>
+                </GeometryDrawing>
+                <!-- Right-side lilac glow -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="1500,640" RadiusX="520" RadiusY="480"/>
+                    </GeometryDrawing.Geometry>
+                    <GeometryDrawing.Brush>
+                        <RadialGradientBrush>
+                            <GradientStop Color="#4CD9C2F0" Offset="0"/>
+                            <GradientStop Color="#00D9C2F0" Offset="1"/>
+                        </RadialGradientBrush>
+                    </GeometryDrawing.Brush>
+                </GeometryDrawing>
+                <!-- Bottom-centre glow -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="700,1000" RadiusX="760" RadiusY="440"/>
+                    </GeometryDrawing.Geometry>
+                    <GeometryDrawing.Brush>
+                        <RadialGradientBrush>
+                            <GradientStop Color="#52E48ABE" Offset="0"/>
+                            <GradientStop Color="#00E48ABE" Offset="1"/>
+                        </RadialGradientBrush>
+                    </GeometryDrawing.Brush>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+
+    <!-- Frosted glass panels (sidebar, cards): a little brighter at the top, like light catching the pane -->
+    <LinearGradientBrush x:Key="GlassBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#D9FFFFFF" Offset="0"/>
+        <GradientStop Color="#B8FFFFFF" Offset="1"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="GlassStrongBrush" Color="#E6FFFFFF"/>
+    <SolidColorBrush x:Key="GlassHoverBrush" Color="#EBFFFFFF"/>
+    <!-- Inputs: frosted, and nearly solid while being typed in so text stays crisp -->
+    <SolidColorBrush x:Key="GlassInputBrush" Color="#B3FFFFFF"/>
+    <SolidColorBrush x:Key="GlassInputFocusBrush" Color="#F5FFFFFF"/>
+    <!-- Dropdown lists: mostly opaque so the content behind never competes with the options -->
+    <SolidColorBrush x:Key="GlassPopupBrush" Color="#F2FFFFFF"/>
+    <!-- Primary buttons: the accent pink with a soft top sheen (white text keeps its contrast) -->
+    <LinearGradientBrush x:Key="AccentGlassBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#D56EA9" Offset="0"/>
+        <GradientStop Color="#C4558F" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="AccentGlassHoverBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#C55F9B" Offset="0"/>
+        <GradientStop Color="#B14883" Offset="1"/>
+    </LinearGradientBrush>
+    <!-- Light-catching glass edge: bright at the top-left, soft pink at the bottom-right -->
+    <LinearGradientBrush x:Key="GlassBorderBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#F2FFFFFF" Offset="0"/>
+        <GradientStop Color="#99F3CFE3" Offset="1"/>
+    </LinearGradientBrush>
 
     <!-- Darker side on the left, under the greeting text, for white-text contrast -->
     <LinearGradientBrush x:Key="BannerBrush" StartPoint="0,0" EndPoint="1,1">

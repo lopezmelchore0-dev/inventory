@@ -45,8 +45,8 @@
                 </Border>
 
                 <!-- Quick actions (like the reference action bar) -->
-                <Border Background="{StaticResource SurfaceBrush}" CornerRadius="20" Padding="8" Margin="0,16,0,0"
-                        BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
+                <Border Background="{StaticResource GlassBrush}" CornerRadius="20" Padding="8" Margin="0,16,0,0"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1">
                     <UniformGrid Rows="1">
                         <Button Style="{StaticResource QuickActionButton}" Click="QuickAddItem_Click">
                             <StackPanel>

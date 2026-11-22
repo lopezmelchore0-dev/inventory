@@ -4,7 +4,7 @@
         Title="PawStock – Pet Grooming Inventory"
         Width="1366" Height="820" MinWidth="1100" MinHeight="680"
         WindowStartupLocation="CenterScreen" WindowState="Maximized"
-        Background="{StaticResource AppBackgroundBrush}"
+        Background="{StaticResource AppBackdropBrush}"
         FontFamily="Segoe UI" Foreground="{StaticResource TextPrimaryBrush}"
         UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
     <Grid>
@@ -17,8 +17,8 @@
             </Grid.ColumnDefinitions>
 
             <!-- Sidebar -->
-            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="24" Margin="16,16,0,16"
-                    BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
+            <Border Background="{StaticResource GlassBrush}" CornerRadius="24" Margin="16,16,0,16"
+                    BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1">
                 <Grid Margin="16,22,16,16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -139,7 +139,7 @@
         <Border x:Name="ModalOverlay" Background="{StaticResource OverlayBrush}" Visibility="Collapsed"/>
 
         <!-- ===================== Database connection error ===================== -->
-        <Grid x:Name="DbErrorPanel" Background="{StaticResource AppBackgroundBrush}" Visibility="Collapsed">
+        <Grid x:Name="DbErrorPanel" Background="{StaticResource AppBackdropBrush}" Visibility="Collapsed">
             <Border Style="{StaticResource Card}" Width="580" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="36">
                 <StackPanel>
                     <Border Width="64" Height="64" CornerRadius="32" Background="{StaticResource LavenderBrush}" HorizontalAlignment="Left">

@@ -9,8 +9,8 @@
             <Setter Property="Padding" Value="14,10"/>
             <Setter Property="Margin" Value="0,0,10,0"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}"/>
-            <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource GlassBorderBrush}"/>
+            <Setter Property="Background" Value="{StaticResource GlassBrush}"/>
         </Style>
     </local:PageBase.Resources>
 

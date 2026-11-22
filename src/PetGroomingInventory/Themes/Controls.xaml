@@ -72,9 +72,10 @@
     </Style>
 
     <!-- ===================== Containers ===================== -->
+    <!-- Frosted glass card over the app backdrop (no shadow effect: it would blur the text inside and slow scrolling) -->
     <Style x:Key="Card" TargetType="Border">
-        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}"/>
+        <Setter Property="Background" Value="{StaticResource GlassBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource GlassBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="18"/>
         <Setter Property="Padding" Value="20"/>
@@ -83,6 +84,7 @@
     <!-- Centered card used by Login, Register and Forgot Password.
          MaxWidth + Stretch: full size (and centered) on normal windows, shrinks instead of clipping on narrow ones. -->
     <Style x:Key="AuthCard" TargetType="Border" BasedOn="{StaticResource Card}">
+        <Setter Property="Background" Value="{StaticResource GlassStrongBrush}"/>
         <Setter Property="MaxWidth" Value="460"/>
         <Setter Property="CornerRadius" Value="24"/>
         <Setter Property="Padding" Value="36,32"/>
@@ -144,11 +146,11 @@
     </Style>
 
     <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
-        <Setter Property="Background" Value="{StaticResource AccentButtonBrush}"/>
+        <Setter Property="Background" Value="{StaticResource AccentGlassBrush}"/>
         <Setter Property="Foreground" Value="White"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{StaticResource AccentButtonHoverBrush}"/>
+                <Setter Property="Background" Value="{StaticResource AccentGlassHoverBrush}"/>
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
                 <Setter Property="Background" Value="{StaticResource PrimaryDarkBrush}"/>
@@ -160,8 +162,11 @@
         </Style.Triggers>
     </Style>
 
+    <!-- Frosted white glass with a pink edge: stays visible on the pink backdrop, on cards and in dialogs -->
     <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
-        <Setter Property="Background" Value="{StaticResource LavenderBrush}"/>
+        <Setter Property="Background" Value="{StaticResource GlassInputBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{StaticResource InputBorderBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource PrimaryDarkBrush}"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
@@ -231,7 +236,7 @@
         <Setter Property="Width" Value="46"/>
         <Setter Property="Height" Value="46"/>
         <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="Background" Value="{StaticResource GlassBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource PrimaryDarkBrush}"/>
         <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
         <Setter Property="FontSize" Value="16"/>
@@ -240,7 +245,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="23"
-                            BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
+                            BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -254,7 +259,7 @@
     </Style>
 
     <Style x:Key="SidebarCardButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
-        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="Background" Value="{StaticResource GlassInputBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="FontSize" Value="12.5"/>
         <Setter Property="Padding" Value="12,9"/>
@@ -262,7 +267,7 @@
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Foreground" Value="{StaticResource PrimaryDarkBrush}"/>
-                <Setter Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
+                <Setter Property="Background" Value="{StaticResource GlassHoverBrush}"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -302,14 +307,14 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd" Background="{StaticResource SurfaceBrush}" CornerRadius="18" Padding="18,16"
-                            BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
+                    <Border x:Name="Bd" Background="{StaticResource GlassBrush}" CornerRadius="18" Padding="18,16"
+                            BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1">
                         <ContentPresenter HorizontalAlignment="Stretch"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource InputHoverBorderBrush}"/>
-                            <Setter TargetName="Bd" Property="Background" Value="#FFFBFD"/>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource GlassHoverBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -328,8 +333,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd" Background="{StaticResource SurfaceBrush}" CornerRadius="18" Padding="20,18"
-                            BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
+                    <Border x:Name="Bd" Background="{StaticResource GlassBrush}" CornerRadius="18" Padding="20,18"
+                            BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1">
                         <Border.RenderTransform>
                             <TranslateTransform x:Name="Lift" Y="0"/>
                         </Border.RenderTransform>
@@ -338,7 +343,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource InputHoverBorderBrush}"/>
-                            <Setter TargetName="Bd" Property="Background" Value="#FFFBFD"/>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource GlassHoverBrush}"/>
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
@@ -417,7 +422,7 @@
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource LavenderHoverBrush}"/>
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentButtonBrush}"/>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentGlassBrush}"/>
                             <Setter Property="Foreground" Value="White"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -430,7 +435,7 @@
     <Style TargetType="TextBox">
         <Setter Property="FontSize" Value="13.5"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="Background" Value="{StaticResource GlassInputBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource InputBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="12,9"/>
@@ -463,6 +468,7 @@
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource GlassInputFocusBrush}"/>
                         </Trigger>
                         <Trigger Property="IsReadOnly" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource SurfaceAltBrush}"/>
@@ -481,7 +487,7 @@
     <Style TargetType="PasswordBox">
         <Setter Property="FontSize" Value="13.5"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="Background" Value="{StaticResource GlassInputBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource InputBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="12,9"/>
@@ -505,6 +511,7 @@
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource GlassInputFocusBrush}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.6"/>
@@ -526,7 +533,7 @@
                 <ControlTemplate TargetType="CheckBox">
                     <StackPanel Orientation="Horizontal" Background="Transparent">
                         <Border x:Name="Box" Width="18" Height="18" CornerRadius="5" BorderThickness="1.5"
-                                BorderBrush="{StaticResource InputHoverBorderBrush}" Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{StaticResource InputHoverBorderBrush}" Background="{StaticResource GlassInputBrush}"
                                 VerticalAlignment="Center">
                             <TextBlock x:Name="Check" Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="10.5"
                                        Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
@@ -559,7 +566,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="Bd" Background="{StaticResource SurfaceBrush}" CornerRadius="12" BorderThickness="1"
+                    <Border x:Name="Bd" Background="{StaticResource GlassInputBrush}" CornerRadius="12" BorderThickness="1"
                             BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource AncestorType=ComboBox}}">
                         <TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="11"
                                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,14,0"
@@ -571,6 +578,7 @@
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource GlassInputFocusBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -606,7 +614,7 @@
                                    TextTrimming="CharacterEllipsis"/>
                         <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}"
                                AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
-                            <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource CardBorderBrush}"
+                            <Border Background="{StaticResource GlassPopupBrush}" BorderBrush="{StaticResource GlassBorderBrush}"
                                     BorderThickness="1" CornerRadius="12" Margin="0,4,8,8" Padding="6"
                                     MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
                                     MaxHeight="{TemplateBinding MaxDropDownHeight}">
@@ -694,7 +702,7 @@
                                    TextTrimming="CharacterEllipsis"/>
                         <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}"
                                AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
-                            <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource CardBorderBrush}"
+                            <Border Background="{StaticResource GlassPopupBrush}" BorderBrush="{StaticResource GlassBorderBrush}"
                                     BorderThickness="1" CornerRadius="12" Margin="0,4,8,8" Padding="6"
                                     MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
                                     MaxHeight="{TemplateBinding MaxDropDownHeight}">
@@ -756,7 +764,7 @@
     <Style TargetType="DatePicker">
         <Setter Property="FontSize" Value="13.5"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="Background" Value="{StaticResource GlassInputBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource InputBorderBrush}"/>
         <Setter Property="Padding" Value="12,7,6,7"/>
         <Setter Property="MinHeight" Value="40"/>
@@ -970,7 +978,7 @@
                             <Setter Property="Foreground" Value="{StaticResource PrimaryDarkBrush}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource SurfaceBrush}"/>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource GlassStrongBrush}"/>
                             <Setter Property="Foreground" Value="{StaticResource PrimaryDarkBrush}"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
                         </Trigger>
@@ -1011,14 +1019,15 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Window">
                     <Grid Margin="24">
-                        <!-- Shadow is drawn on a sibling so the content text stays crisp -->
-                        <Border Background="{StaticResource SurfaceBrush}" CornerRadius="20">
+                        <!-- Shadow is drawn on a sibling so the content text stays crisp. The sibling also carries the
+                             pink backdrop, so the dialog reads as a frosted pane over the same glow as the app. -->
+                        <Border Background="{StaticResource AppBackdropBrush}" CornerRadius="20">
                             <Border.Effect>
                                 <DropShadowEffect BlurRadius="30" ShadowDepth="6" Opacity="0.2" Color="#6B2A50"/>
                             </Border.Effect>
                         </Border>
-                        <Border Background="{StaticResource SurfaceBrush}" CornerRadius="20"
-                                BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
+                        <Border Background="{StaticResource GlassStrongBrush}" CornerRadius="20"
+                                BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1">
                             <AdornerDecorator>
                                 <ContentPresenter/>
                             </AdornerDecorator>
@@ -1089,7 +1098,7 @@
                                    TextTrimming="CharacterEllipsis"/>
                         <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}"
                                AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
-                            <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource CardBorderBrush}"
+                            <Border Background="{StaticResource GlassPopupBrush}" BorderBrush="{StaticResource GlassBorderBrush}"
                                     BorderThickness="1" CornerRadius="12" Margin="0,4,8,8" Padding="6"
                                     MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
                                     MaxHeight="{TemplateBinding MaxDropDownHeight}">
