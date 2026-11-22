@@ -104,6 +104,7 @@ Class MainWindow
         DbErrorMessage.Text = ErrorText.Describe(ex)
         DbConfigText.Text = $"Server: {Db.Config.Server}:{Db.Config.Port}    Database: {Db.Config.Database}    User: {Db.Config.User}" &
                             $"{Environment.NewLine}Connection settings file: {DbConfig.FilePath}"
+        DbErrorDetails.Text = "Details: " & ErrorText.TechnicalDetails(ex)
         DbErrorPanel.Visibility = Visibility.Visible
     End Sub
 

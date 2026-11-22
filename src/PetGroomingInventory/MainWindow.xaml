@@ -154,9 +154,13 @@
                             <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" LineHeight="22">
                                 1. Open the XAMPP Control Panel.<LineBreak/>
                                 2. Click Start beside MySQL and wait until it turns green.<LineBreak/>
-                                3. Click Retry below. The database and tables are created automatically.
+                                3. If MySQL is already green, check that the port shown beside MySQL in XAMPP matches the Port in the connection settings.<LineBreak/>
+                                4. Click Retry below. The database and tables are created automatically.
                             </TextBlock>
                             <TextBlock x:Name="DbConfigText" Margin="0,12,0,0" FontSize="12" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap"/>
+                            <TextBox x:Name="DbErrorDetails" Margin="0,8,0,0" FontSize="12" Foreground="{StaticResource TextMutedBrush}"
+                                     TextWrapping="Wrap" IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"
+                                     Style="{x:Null}"/>
                         </StackPanel>
                     </Border>
                     <StackPanel Orientation="Horizontal" Margin="0,22,0,0">

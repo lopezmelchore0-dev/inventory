@@ -76,4 +76,18 @@ Public NotInheritable Class ErrorText
         If IsConnectionError(ex) Then Return "MySQL is not reachable. Make sure MySQL is started in the XAMPP Control Panel."
         Return ex.Message
     End Function
+
+    ''' <summary>The underlying driver/socket messages (outermost first), for diagnosing connection problems.</summary>
+    Public Shared Function TechnicalDetails(ex As Exception) As String
+        Dim parts As New List(Of String)
+        Dim current = ex
+        While current IsNot Nothing
+            Dim text = current.Message?.Trim()
+            Dim mysqlEx = TryCast(current, MySqlException)
+            If mysqlEx IsNot Nothing Then text = $"{text} (MySQL error {CInt(mysqlEx.ErrorCode)})"
+            If Not String.IsNullOrEmpty(text) AndAlso Not parts.Contains(text) Then parts.Add(text)
+            current = current.InnerException
+        End While
+        Return String.Join(" → ", parts)
+    End Function
 End Class

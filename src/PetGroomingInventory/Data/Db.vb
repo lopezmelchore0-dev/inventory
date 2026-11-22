@@ -43,13 +43,15 @@ Public NotInheritable Class Db
     Public Shared Property Config As DbConfig = DbConfig.Load()
 
     Public Shared Function BuildConnectionString(includeDatabase As Boolean) As String
+        ' XAMPP's MariaDB listens on IPv4; "localhost" can resolve to IPv6 ::1 first, so connect to 127.0.0.1 directly.
+        Dim host = If(String.Equals(Config.Server?.Trim(), "localhost", StringComparison.OrdinalIgnoreCase), "127.0.0.1", Config.Server)
         Dim builder As New MySqlConnectionStringBuilder With {
-            .Server = Config.Server,
+            .Server = host,
             .Port = CUInt(Config.Port),
             .UserID = Config.User,
             .Password = Config.Password,
             .CharacterSet = "utf8mb4",
-            .ConnectionTimeout = 5,
+            .ConnectionTimeout = 15,
             .ConvertZeroDateTime = True
         }
         If includeDatabase Then builder.Database = Config.Database
