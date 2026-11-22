@@ -80,13 +80,14 @@
         <Setter Property="Padding" Value="20"/>
     </Style>
 
-    <!-- Centered card used by Login, Register and Forgot Password -->
+    <!-- Centered card used by Login, Register and Forgot Password.
+         MaxWidth + Stretch: full size (and centered) on normal windows, shrinks instead of clipping on narrow ones. -->
     <Style x:Key="AuthCard" TargetType="Border" BasedOn="{StaticResource Card}">
-        <Setter Property="Width" Value="460"/>
+        <Setter Property="MaxWidth" Value="460"/>
         <Setter Property="CornerRadius" Value="24"/>
         <Setter Property="Padding" Value="36,32"/>
         <Setter Property="Margin" Value="16,24"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
 

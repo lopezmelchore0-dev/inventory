@@ -46,16 +46,59 @@ Public NotInheritable Class AuthUi
         Return False
     End Function
 
-    ''' <summary>Enter anywhere in the form submits it (Shift+Enter and combo boxes with an open list are left alone).</summary>
+    ''' <summary>
+    ''' Enter anywhere in the form submits it, including on a check box such as "Remember me" (Shift+Enter,
+    ''' combo boxes with an open list and other buttons, which handle Enter themselves, are left alone).
+    ''' </summary>
     Public Shared Sub SubmitOnEnter(form As UIElement, submit As Action)
         AddHandler form.PreviewKeyDown,
             Sub(s, e)
                 If e.Key <> Key.Enter OrElse Keyboard.Modifiers <> ModifierKeys.None Then Return
                 Dim combo = TryCast(e.OriginalSource, ComboBox)
                 If combo IsNot Nothing AndAlso combo.IsDropDownOpen Then Return
-                If TypeOf e.OriginalSource Is ButtonBase Then Return
+                If TypeOf e.OriginalSource Is ButtonBase AndAlso TypeOf e.OriginalSource IsNot CheckBox Then Return
                 e.Handled = True
                 submit()
             End Sub
+    End Sub
+
+    ''' <summary>
+    ''' Esc anywhere in the form runs <paramref name="cancel"/> (e.g. back to Login). Ignored while
+    ''' <paramref name="actionButton"/> is busy (disabled) and while a combo box list is open.
+    ''' </summary>
+    Public Shared Sub CancelOnEscape(form As UIElement, cancel As Action, actionButton As Button)
+        AddHandler form.PreviewKeyDown,
+            Sub(s, e)
+                If e.Key <> Key.Escape OrElse Keyboard.Modifiers <> ModifierKeys.None Then Return
+                Dim combo = TryCast(e.OriginalSource, ComboBox)
+                If combo IsNot Nothing AndAlso combo.IsDropDownOpen Then Return
+                If Not actionButton.IsEnabled Then Return
+                e.Handled = True
+                cancel()
+            End Sub
+    End Sub
+
+    ''' <summary>Width (DIPs) below which the auth card switches to tighter padding and margins.</summary>
+    Public Const CompactWidth As Double = 520
+
+    Private Shared ReadOnly CompactPadding As New Thickness(22, 24, 22, 24)
+    Private Shared ReadOnly CompactMargin As New Thickness(12, 16, 12, 16)
+
+    ''' <summary>
+    ''' On narrow windows (high display scaling, small or portrait screens) the card's padding and margins
+    ''' are reduced so the form keeps usable width. On normal windows the AuthCard style values apply unchanged.
+    ''' </summary>
+    Public Shared Sub MakeResponsive(host As FrameworkElement, card As Border)
+        AddHandler host.SizeChanged, Sub(s, e) ApplyCompact(card, e.NewSize.Width < CompactWidth)
+    End Sub
+
+    Private Shared Sub ApplyCompact(card As Border, compact As Boolean)
+        If compact Then
+            card.Padding = CompactPadding
+            card.Margin = CompactMargin
+        Else
+            card.ClearValue(Border.PaddingProperty)
+            card.ClearValue(FrameworkElement.MarginProperty)
+        End If
     End Sub
 End Class

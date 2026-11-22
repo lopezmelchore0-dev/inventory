@@ -13,10 +13,33 @@ Class PasswordField
 
     Public Event PasswordChanged As EventHandler
 
+    ''' <summary>Below this width (DIPs) the requirements checklist uses one column instead of two.</summary>
+    Private Const SingleColumnWidth As Double = 300
+
     Public Sub New()
         InitializeComponent()
         AddHandler GotKeyboardFocus, AddressOf ForwardFocus
+        AddHandler IsKeyboardFocusWithinChanged, Sub(s, e) UpdateCapsLock()
+        AddHandler PreviewKeyDown, AddressOf Field_PreviewKeyDown
+        AddHandler PreviewKeyUp, Sub(s, e) UpdateCapsLock()
+        AddHandler SizeChanged, Sub(s, e) RulesList.Tag = If(e.NewSize.Width < SingleColumnWidth, 1, 2)
         UpdatePlaceholder()
+    End Sub
+
+    ''' <summary>Alt+F8 shows/hides the password (same shortcut as the Windows sign-in screen).</summary>
+    Private Sub Field_PreviewKeyDown(sender As Object, e As KeyEventArgs)
+        Dim pressed = If(e.Key = Key.System, e.SystemKey, e.Key)
+        If pressed = Key.F8 AndAlso Keyboard.Modifiers = ModifierKeys.Alt Then
+            e.Handled = True
+            SetRevealed(Not _revealed)
+            ActiveBox.Focus()
+        End If
+        UpdateCapsLock()
+    End Sub
+
+    Private Sub UpdateCapsLock()
+        Dim show = IsKeyboardFocusWithin AndAlso Keyboard.IsKeyToggled(Key.CapsLock)
+        CapsLockText.Visibility = If(show, Visibility.Visible, Visibility.Collapsed)
     End Sub
 
     Public Property Placeholder As String
@@ -99,6 +122,7 @@ Class PasswordField
             VisibleBox.CaretIndex = current.Length
         Else
             HiddenBox.Password = current
+            MoveCaretToEnd(HiddenBox)
             VisibleBox.Clear()
         End If
         _syncing = False
@@ -106,8 +130,21 @@ Class PasswordField
         HiddenBox.Visibility = If(reveal, Visibility.Collapsed, Visibility.Visible)
         VisibleBox.Visibility = If(reveal, Visibility.Visible, Visibility.Collapsed)
         RevealButton.Content = If(reveal, ChrW(&HED1A), ChrW(&HE7B3))
-        RevealButton.ToolTip = If(reveal, "Hide password", "Show password")
+        RevealButton.ToolTip = If(reveal, "Hide password (Alt+F8)", "Show password (Alt+F8)")
         UpdatePlaceholder()
+    End Sub
+
+    Private Shared ReadOnly PasswordSelect As Reflection.MethodInfo =
+        GetType(PasswordBox).GetMethod("Select", Reflection.BindingFlags.Instance Or Reflection.BindingFlags.NonPublic,
+                                       Nothing, {GetType(Integer), GetType(Integer)}, Nothing)
+
+    ''' <summary>PasswordBox has no public caret API; its internal Select(start, length) is used when available.</summary>
+    Private Shared Sub MoveCaretToEnd(box As PasswordBox)
+        Try
+            PasswordSelect?.Invoke(box, New Object() {box.Password.Length, 0})
+        Catch
+            ' Cursor position is a convenience only; leave it where it is.
+        End Try
     End Sub
 
     Private ReadOnly Property ActiveBox As Control

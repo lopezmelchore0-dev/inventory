@@ -49,6 +49,36 @@ Class MainWindow
         ConnectDatabase()
     End Sub
 
+    ' ===================== Window size =====================
+
+    ' Preferred minimum size. On small screens or with display scaling (e.g. 1366×768 at 125–150%) the
+    ' work area is smaller than this, so the minimum is capped to the screen to keep everything reachable.
+    Private Const PreferredMinWidth As Double = 1100
+    Private Const PreferredMinHeight As Double = 680
+
+    Private Sub MainWindow_SourceInitialized(sender As Object, e As EventArgs) Handles Me.SourceInitialized
+        FitMinSizeToScreen()
+        AddHandler Microsoft.Win32.SystemEvents.DisplaySettingsChanged, AddressOf DisplaySettings_Changed
+    End Sub
+
+    Private Sub MainWindow_DpiChanged(sender As Object, e As DpiChangedEventArgs) Handles Me.DpiChanged
+        FitMinSizeToScreen()
+    End Sub
+
+    Private Sub DisplaySettings_Changed(sender As Object, e As EventArgs)
+        Dispatcher.BeginInvoke(New Action(AddressOf FitMinSizeToScreen))
+    End Sub
+
+    Private Sub MainWindow_Closed(sender As Object, e As EventArgs) Handles Me.Closed
+        RemoveHandler Microsoft.Win32.SystemEvents.DisplaySettingsChanged, AddressOf DisplaySettings_Changed
+    End Sub
+
+    Private Sub FitMinSizeToScreen()
+        Dim area = SystemParameters.WorkArea
+        MinWidth = Math.Min(PreferredMinWidth, area.Width)
+        MinHeight = Math.Min(PreferredMinHeight, area.Height)
+    End Sub
+
     ' ===================== Database =====================
 
     Private Sub ConnectDatabase()

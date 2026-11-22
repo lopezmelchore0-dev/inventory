@@ -22,6 +22,7 @@ Class LoginView
         RememberBox.IsChecked = remembered IsNot Nothing
 
         AuthUi.SubmitOnEnter(FormCard, AddressOf Submit)
+        AuthUi.MakeResponsive(Me, FormCard)
         AddHandler Loaded,
             Sub(s, e)
                 If UsernameBox.Text.Length > 0 Then PasswordInput.Focus() Else UsernameBox.Focus()

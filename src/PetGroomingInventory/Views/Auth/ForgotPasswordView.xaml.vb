@@ -22,6 +22,8 @@ Class ForgotPasswordView
         _errors.Register("password", NewPasswordError, NewPasswordInput)
         _errors.Register("confirm", ConfirmError, ConfirmInput)
         AuthUi.SubmitOnEnter(FormCard, AddressOf Submit)
+        AuthUi.CancelOnEscape(FormCard, Sub() BackToLogin_Click(Nothing, Nothing), ActionButton)
+        AuthUi.MakeResponsive(Me, FormCard)
         AddHandler Loaded, Sub(s, e) UsernameBox.Focus()
         AddHandler Unloaded, Sub(s, e) _redirectTimer?.Stop()
     End Sub

@@ -39,7 +39,11 @@ Public Class FormErrors
             End If
         Next
         If unmatched.Count > 0 Then ShowGeneral(String.Join(Environment.NewLine, unmatched))
-        firstInput?.Focus()
+        If firstInput IsNot Nothing Then
+            firstInput.Focus()
+            ' The field's panel holds its label, input and the error line below it; show all of it.
+            ScrollIntoView(If(TryCast(VisualTreeHelper.GetParent(firstInput), FrameworkElement), firstInput))
+        End If
     End Sub
 
     Public Sub ShowGeneral(message As String)
@@ -49,5 +53,14 @@ Public Class FormErrors
         End If
         _general.Text = message
         _general.Visibility = Visibility.Visible
+        ScrollIntoView(If(TryCast(VisualTreeHelper.GetParent(_general), FrameworkElement), _general))
+    End Sub
+
+    ''' <summary>
+    ''' Scrolls a short window so a newly shown message is visible. Runs after layout, because the message
+    ''' was collapsed until now and has no size yet.
+    ''' </summary>
+    Private Shared Sub ScrollIntoView(target As FrameworkElement)
+        target.Dispatcher.BeginInvoke(Threading.DispatcherPriority.Loaded, New Action(Sub() target.BringIntoView()))
     End Sub
 End Class

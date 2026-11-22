@@ -4,16 +4,20 @@
              Focusable="False" IsTabStop="False">
     <!-- Logo + title block at the top of the Login, Register and Forgot Password cards -->
     <StackPanel>
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
-            <Border Width="46" Height="46" CornerRadius="15" Background="{StaticResource LavenderBrush}">
+        <Grid Margin="0,0,0,22">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border Width="46" Height="46" CornerRadius="15" Background="{StaticResource LavenderBrush}" VerticalAlignment="Center">
                 <Path Data="{StaticResource PawGeometry}" Fill="{StaticResource PrimaryDarkBrush}" Stretch="Uniform" Width="23" Height="23"/>
             </Border>
-            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                <TextBlock x:Name="AppNameText" Text="PawStock" FontSize="19" FontWeight="Bold"/>
-                <TextBlock Text="Pet Grooming Shop · Aparri, Cagayan" FontSize="11.5" Foreground="{StaticResource TextMutedBrush}"/>
+            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                <TextBlock x:Name="AppNameText" Text="PawStock" FontSize="19" FontWeight="Bold" TextWrapping="Wrap"/>
+                <TextBlock Text="Pet Grooming Shop · Aparri, Cagayan" FontSize="11.5" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap"/>
             </StackPanel>
-        </StackPanel>
-        <TextBlock x:Name="TitleText" FontSize="23" FontWeight="SemiBold"/>
+        </Grid>
+        <TextBlock x:Name="TitleText" FontSize="23" FontWeight="SemiBold" TextWrapping="Wrap"/>
         <TextBlock x:Name="SubtitleText" Foreground="{StaticResource TextSecondaryBrush}" FontSize="13.5" TextWrapping="Wrap" Margin="0,4,0,0"/>
     </StackPanel>
 </UserControl>

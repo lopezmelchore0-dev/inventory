@@ -14,7 +14,7 @@
 
                 <StackPanel Margin="0,20,0,14">
                     <TextBlock Text="Username" Style="{StaticResource LabelText}"/>
-                    <TextBox x:Name="UsernameBox" Tag="Enter your username" MaxLength="30"
+                    <TextBox x:Name="UsernameBox" Tag="Enter your username" MaxLength="30" InputScope="LogOnName"
                              AutomationProperties.Name="Username"/>
                     <TextBlock x:Name="UsernameError" Style="{StaticResource ErrorText}"/>
                 </StackPanel>
@@ -27,10 +27,14 @@
                 </StackPanel>
 
                 <Grid Margin="0,0,0,18">
-                    <CheckBox x:Name="RememberBox" Content="Remember me" VerticalAlignment="Center"
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <CheckBox x:Name="RememberBox" Content="Remember me" VerticalAlignment="Center" HorizontalAlignment="Left"
                               ToolTip="Remembers your username on this computer. Your password is always required."/>
-                    <Button x:Name="ForgotButton" Style="{StaticResource LinkButton}" Content="Forgot Password?" HorizontalAlignment="Right"
-                            Click="Forgot_Click"/>
+                    <Button x:Name="ForgotButton" Grid.Column="1" Style="{StaticResource LinkButton}" Content="Forgot Password?"
+                            HorizontalAlignment="Right" Margin="12,0,0,0" Click="Forgot_Click"/>
                 </Grid>
 
                 <Border Style="{StaticResource NoticeBox}" Margin="0,0,0,14" Visibility="{Binding Visibility, ElementName=GeneralError}">
@@ -40,10 +44,10 @@
                 <Button x:Name="LoginButton" Style="{StaticResource PrimaryButton}" Content="Login" Padding="18,12"
                         HorizontalAlignment="Stretch" Click="Login_Click"/>
 
-                <StackPanel x:Name="RegisterLinkPanel" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+                <WrapPanel x:Name="RegisterLinkPanel" HorizontalAlignment="Center" Margin="0,20,0,0">
                     <TextBlock Text="Don't have an account?" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                     <Button x:Name="RegisterButton" Style="{StaticResource LinkButton}" Content="Register" FontWeight="SemiBold" Margin="2,0,0,0" Click="Register_Click"/>
-                </StackPanel>
+                </WrapPanel>
                 <TextBlock x:Name="RegisterClosedText" Style="{StaticResource MutedText}" TextAlignment="Center" Margin="0,20,0,0"
                            Visibility="Collapsed"
                            Text="Registration is closed because an Admin account already exists."/>

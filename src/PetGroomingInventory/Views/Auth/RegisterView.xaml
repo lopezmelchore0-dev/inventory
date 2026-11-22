@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:PetGroomingInventory">
     <ScrollViewer FocusVisualStyle="{x:Null}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Border x:Name="FormCard" Style="{StaticResource AuthCard}" Width="500">
+        <Border x:Name="FormCard" Style="{StaticResource AuthCard}" MaxWidth="500">
             <Grid>
                 <!-- ===================== Form ===================== -->
                 <StackPanel x:Name="FormPanel">
@@ -18,7 +18,7 @@
 
                     <StackPanel Margin="0,0,0,14">
                         <TextBlock Text="Username" Style="{StaticResource LabelText}"/>
-                        <TextBox x:Name="UsernameBox" Tag="4–30 letters, numbers, . or _" MaxLength="30"
+                        <TextBox x:Name="UsernameBox" Tag="4–30 letters, numbers, . or _" MaxLength="30" InputScope="LogOnName"
                                  TextChanged="UsernameBox_TextChanged" AutomationProperties.Name="Username"/>
                         <TextBlock x:Name="UsernameError" Style="{StaticResource ErrorText}"/>
                     </StackPanel>
@@ -58,10 +58,10 @@
                     <Button x:Name="CreateButton" Style="{StaticResource PrimaryButton}" Content="Create Admin Account" Padding="18,12"
                             HorizontalAlignment="Stretch" Click="Create_Click"/>
 
-                    <StackPanel x:Name="LoginLinkPanel" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+                    <WrapPanel x:Name="LoginLinkPanel" HorizontalAlignment="Center" Margin="0,20,0,0">
                         <TextBlock Text="Already have an account?" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                         <Button Style="{StaticResource LinkButton}" Content="Login" FontWeight="SemiBold" Margin="2,0,0,0" Click="BackToLogin_Click"/>
-                    </StackPanel>
+                    </WrapPanel>
                 </StackPanel>
 
                 <!-- ===================== Success ===================== -->

@@ -11,6 +11,7 @@ Class ChangePasswordView
         _errors.Register("password", NewError, NewInput)
         _errors.Register("confirm", ConfirmError, ConfirmInput)
         AuthUi.SubmitOnEnter(Form, AddressOf Submit)
+        AuthUi.CancelOnEscape(Form, Sub() BackToProfile_Click(Nothing, Nothing), ChangeButton)
         AddHandler IsVisibleChanged,
             Sub(s, e)
                 If IsVisible Then

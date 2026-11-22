@@ -16,6 +16,8 @@ Class RegisterView
         QuestionBox.ItemsSource = SecurityQuestions.All
 
         AuthUi.SubmitOnEnter(FormPanel, AddressOf Submit)
+        AuthUi.CancelOnEscape(FormCard, AddressOf GoToLogin, CreateButton)
+        AuthUi.MakeResponsive(Me, FormCard)
         AddHandler Loaded, Sub(s, e) FullNameBox.Focus()
     End Sub
 
@@ -59,10 +61,15 @@ Class RegisterView
     End Sub
 
     Private Sub Proceed_Click(sender As Object, e As RoutedEventArgs)
-        MainWindow.Instance?.ShowAuth(AuthScreen.Login, username:=_createdUsername)
+        GoToLogin()
     End Sub
 
     Private Sub BackToLogin_Click(sender As Object, e As RoutedEventArgs)
-        MainWindow.Instance?.ShowAuth(AuthScreen.Login)
+        GoToLogin()
+    End Sub
+
+    ''' <summary>Back to Login; after a successful registration the new username is filled in.</summary>
+    Private Sub GoToLogin()
+        MainWindow.Instance?.ShowAuth(AuthScreen.Login, username:=_createdUsername)
     End Sub
 End Class

@@ -74,6 +74,8 @@ Public Class UiSmokeTests
         For Each view In authViews
             Layout(view)
         Next
+        CheckAuthResponsiveness()
+        CheckAuthKeyboard(shell)
 
         AuthService.Login("maria", "Grooming#2026")
         shell.OnSignedIn()
@@ -472,12 +474,118 @@ Public Class UiSmokeTests
     End Function
 
     ''' <summary>Applies templates and runs layout without showing anything on screen.</summary>
-    Private Shared Sub Layout(element As FrameworkElement)
+    Private Shared Sub Layout(element As FrameworkElement, Optional width As Double = 1400, Optional height As Double = 900)
         element.ApplyTemplate()
         Dim target As FrameworkElement = element
         If TypeOf element Is Window Then target = DirectCast(DirectCast(element, Window).Content, FrameworkElement)
-        target.Measure(New Size(1400, 900))
-        target.Arrange(New Rect(0, 0, 1400, 900))
+        target.Measure(New Size(width, height))
+        target.Arrange(New Rect(0, 0, width, height))
         target.UpdateLayout()
+    End Sub
+
+    ' Viewport sizes from the auth UX brief. In WPF these are window-content sizes in DIPs, which occur on
+    ' small/portrait screens and with display scaling (e.g. 1366×768 at 150% ≈ 911×512).
+    Private Shared ReadOnly AuthViewports As Size() = {
+        New Size(320, 568), New Size(375, 667), New Size(390, 844), New Size(430, 932), New Size(768, 1024),
+        New Size(1024, 768), New Size(1366, 768), New Size(1440, 900), New Size(1920, 1080)}
+
+    ''' <summary>
+    ''' Auth screens fit every viewport without horizontal clipping, scroll vertically when too tall,
+    ''' and keep their original card widths on a normal desktop window.
+    ''' </summary>
+    Private Shared Sub CheckAuthResponsiveness()
+        Dim builders As (Name As String, Create As Func(Of FrameworkElement), DesktopWidth As Double)() = {
+            ("Login", Function() New LoginView(True, "A long notice that has to wrap onto several lines when the window is narrow.", "maria"), 460),
+            ("Login (closed)", Function() New LoginView(False), 460),
+            ("Register", Function() New RegisterView(), 500),
+            ("Forgot Password", Function() New ForgotPasswordView(), 480),
+            ("Change Password", Function() New ChangePasswordView(), 560)}
+
+        For Each b In builders
+            For Each size In AuthViewports
+                Dim view = b.Create()
+                ' Twice: the first pass raises SizeChanged, which may switch the card to compact padding.
+                Layout(view, size.Width, size.Height)
+                Layout(view, size.Width, size.Height)
+                Dim where = $"{b.Name} at {size.Width}×{size.Height}"
+
+                Dim overflow = FindHorizontalOverflow(view, view, size.Width)
+                Assert.True(overflow Is Nothing, $"{where}: {overflow} extends past the right edge.")
+
+                Dim scroller = DirectCast(DirectCast(view, UserControl).Content, ScrollViewer)
+                If scroller.ExtentHeight > scroller.ViewportHeight + 1 Then
+                    Assert.True(scroller.ComputedVerticalScrollBarVisibility = Visibility.Visible, $"{where}: content is taller than the window but can't scroll.")
+                End If
+
+                If size = New Size(1440, 900) Then
+                    Dim cardWidth = If(TypeOf view Is ChangePasswordView,
+                                       DirectCast(scroller.Content, Grid).ColumnDefinitions(0).ActualWidth,
+                                       FindCard(view).ActualWidth)
+                    Assert.Equal(b.DesktopWidth, cardWidth, 1)
+                End If
+            Next
+        Next
+    End Sub
+
+    Private Shared Function FindCard(view As FrameworkElement) As Border
+        Return DirectCast(view.FindName("FormCard"), Border)
+    End Function
+
+    ''' <summary>Returns a description of the first visible element whose right edge lies beyond <paramref name="width"/>.</summary>
+    Private Shared Function FindHorizontalOverflow(root As FrameworkElement, element As DependencyObject, width As Double) As String
+        Dim fe = TryCast(element, FrameworkElement)
+        If fe IsNot Nothing Then
+            If fe.Visibility <> Visibility.Visible Then Return Nothing
+            If fe IsNot root AndAlso fe.ActualWidth > 0 Then
+                Dim bounds = fe.TransformToAncestor(root).TransformBounds(New Rect(fe.RenderSize))
+                If bounds.Right > width + 0.5 OrElse bounds.Left < -0.5 Then
+                    Return $"{fe.GetType().Name} '{fe.Name}' ({bounds.Left:0}–{bounds.Right:0})"
+                End If
+            End If
+            ' Inputs scroll their own text internally; their template parts are not page layout.
+            If TypeOf fe Is Primitives.TextBoxBase OrElse TypeOf fe Is PasswordBox OrElse TypeOf fe Is ComboBox Then Return Nothing
+        End If
+        For i = 0 To Media.VisualTreeHelper.GetChildrenCount(element) - 1
+            Dim found = FindHorizontalOverflow(root, Media.VisualTreeHelper.GetChild(element, i), width)
+            If found IsNot Nothing Then Return found
+        Next
+        Return Nothing
+    End Function
+
+    ''' <summary>
+    ''' Enter on a check box such as "Remember me" submits the form instead of toggling it; Esc leaves
+    ''' Forgot Password and Register. Nothing here pumps the dispatcher: that would also run the
+    ''' Application's queued startup (StartupUri) and open a real window.
+    ''' </summary>
+    Private Shared Sub CheckAuthKeyboard(shell As MainWindow)
+        Dim remember As New CheckBox With {.Content = "Remember me"}
+        Dim form As New StackPanel()
+        form.Children.Add(New TextBox())
+        form.Children.Add(remember)
+        Dim submitted = 0
+        AuthUi.SubmitOnEnter(form, Sub() submitted += 1)
+        Dim host = ShowOffScreen(New Window With {.Content = form, .Width = 400, .Height = 300})
+        Try
+            remember.Focus()
+            PressKey(remember, Key.Enter)
+            Assert.Equal(1, submitted)
+            Assert.False(remember.IsChecked)                   ' not toggled
+        Finally
+            host.Close()
+        End Try
+
+        For Each create In New Func(Of UserControl)() {Function() New ForgotPasswordView(), Function() New RegisterView()}
+            Dim view = create()
+            host = ShowOffScreen(New Window With {.Content = view, .Width = 500, .Height = 700})
+            Try
+                Dim box = DirectCast(view.FindName(If(TypeOf view Is RegisterView, "FullNameBox", "UsernameBox")), TextBox)
+                box.Focus()
+                shell.ShowAuth(AuthScreen.ForgotPassword)
+                PressKey(box, Key.Escape)
+                Assert.True(TypeOf shell.AuthPanel.Content Is LoginView, $"Esc on {view.GetType().Name} should return to Login.")
+            Finally
+                host.Close()
+            End Try
+        Next
     End Sub
 End Class
